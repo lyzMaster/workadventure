@@ -1,12 +1,11 @@
 # AGENTS.md - play/
 
-Svelte/Phaser frontend, pusher server, and Room API server.
+Svelte/Phaser standalone frontend.
 
 ## Areas
 
-- `src/front/`: browser application, Svelte UI, Phaser, media, and WebRTC.
-- `src/pusher/`: WebSocket and HTTP server-facing logic.
-- `src/room-api/`: Room API implementation.
+- `src/front/`: browser application, Svelte UI, Phaser, and map editor runtime.
+- `src/standalone/`: Vite standalone bootstrap, scene registry, local storage, and local map edit transport.
 - `src/i18n/`: source translations and generated types.
 - `tests/`: Vitest tests; additional tests are colocated under `src/`.
 
