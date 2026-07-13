@@ -5,6 +5,7 @@ import type { Entity } from "../../../../ECS/Entity";
 import type { GameScene } from "../../../GameScene";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
 import type { RoomConnection } from "../../../../../Connection/RoomConnection";
+import { TexturesHelper } from "../../../../Helpers/TexturesHelper";
 
 export class UpdateEntityFrontCommand extends UpdateEntityCommand implements FrontCommandInterface {
     constructor(
@@ -19,9 +20,9 @@ export class UpdateEntityFrontCommand extends UpdateEntityCommand implements Fro
         super(wamFile, entityId, dataToModify, commandId, oldConfig);
     }
 
-    public execute(): Promise<WAMFileFormat | undefined> {
-        const returnVal = super.execute();
-        this.handleEntityUpdate(this.newConfig);
+    public async execute(): Promise<WAMFileFormat | undefined> {
+        const returnVal = await super.execute();
+        await this.handleEntityUpdate(this.newConfig);
 
         return returnVal;
     }
@@ -59,24 +60,35 @@ export class UpdateEntityFrontCommand extends UpdateEntityCommand implements Fro
         );
     }
 
-    private handleEntityUpdate(config: Partial<WAMEntityData>): void {
+    private async handleEntityUpdate(config: Partial<WAMEntityData>): Promise<void> {
         const entity = this.entitiesManager.getEntities().get(this.entityId);
         if (!entity) {
             return;
         }
         const { x: oldX, y: oldY } = entity.getOldPosition();
+        const oldCollisionGrid = entity.getCollisionGrid();
+        if (config.prefabRef) {
+            const prefab = await this.scene
+                .getEntitiesCollectionsManager()
+                .getEntityPrefab(config.prefabRef.collectionName, config.prefabRef.id);
+            if (!prefab) {
+                throw new Error(`Unknown entity prefab ${config.prefabRef.collectionName}/${config.prefabRef.id}`);
+            }
+            await TexturesHelper.loadEntityImage(this.scene, prefab.imagePath, prefab.imagePath);
+            entity.setPrefab(prefab);
+        }
         entity?.updateEntity(config);
         // If the entity is activable, and not in the activatable entities array of the entity manager,
         // we add it to the array
         if (entity.isActivatable() && !this.entitiesManager.getActivatableEntities().includes(entity)) {
             this.entitiesManager.getActivatableEntities().push(entity);
         }
-        this.updateCollisionGrid(entity, oldX, oldY);
+        this.updateCollisionGrid(entity, oldX, oldY, oldCollisionGrid);
         this.scene.markDirty();
     }
 
-    private updateCollisionGrid(entity: Entity, oldX: number, oldY: number): void {
-        const reversedGrid = entity.getReversedCollisionGrid();
+    private updateCollisionGrid(entity: Entity, oldX: number, oldY: number, oldCollisionGrid?: number[][]): void {
+        const reversedGrid = oldCollisionGrid?.map((row) => row.map((value) => (value === 1 ? -1 : value)));
         const grid = entity.getCollisionGrid();
         if (reversedGrid && grid) {
             this.scene.getGameMapFrontWrapper().modifyToCollisionsLayer(oldX, oldY, "0", reversedGrid);

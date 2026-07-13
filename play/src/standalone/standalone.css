@@ -1,0 +1,61 @@
+@import "@workadventure/tailwind/style.css";
+@import "../front/style/input.css";
+
+@source "./**/*.{svelte,ts}";
+@source "../front/Components/MapEditor/EntityEditor/**/*.{svelte,ts}";
+
+.standalone-editor-toolbar {
+    position: fixed;
+    z-index: 3000;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.standalone-editor-toolbar button,
+.standalone-editor-panel button {
+    border: 0;
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: white;
+    background: rgb(40 47 70 / 92%);
+    cursor: pointer;
+}
+
+.standalone-editor-toolbar button.active {
+    background: #2f7d5f;
+}
+
+.standalone-editor-toolbar button:disabled,
+.standalone-editor-panel button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.standalone-scene-label {
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: white;
+    background: rgb(20 25 40 / 92%);
+}
+
+.standalone-editor-panel {
+    position: fixed;
+    z-index: 2999;
+    top: 0;
+    right: 0;
+    width: min(420px, 42vw);
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: auto;
+    padding: 70px 16px 16px;
+    color: white;
+    background: rgb(20 25 40 / 92%);
+    backdrop-filter: blur(10px);
+}
+
+.standalone-editor-panel .danger {
+    background: #9f2d3f;
+}

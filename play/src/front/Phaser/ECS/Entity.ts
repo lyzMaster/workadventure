@@ -290,6 +290,13 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
         return this.prefab;
     }
 
+    public setPrefab(prefab: EntityPrefab): void {
+        this.prefab = prefab;
+        this.entityData.prefabRef = { collectionName: prefab.collectionName, id: prefab.id };
+        this.setTexture(prefab.imagePath);
+        this.setDepth(this.y + this.displayHeight + (prefab.depthOffset ?? 0));
+    }
+
     public getProperties(): EntityDataProperties {
         return this.entityData.properties;
     }

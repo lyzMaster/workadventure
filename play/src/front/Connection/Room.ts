@@ -112,6 +112,34 @@ export class Room {
         throw new Error("Room resolving seems stuck in a redirect loop after 32 redirect attempts");
     }
 
+    /**
+     * Builds a room from an already resolved static map.
+     *
+     * Unlike createRoom, this factory performs no HTTP request. It is intended
+     * for embedded and standalone runtimes that provide their own scene
+     * resolver.
+     */
+    public static createResolvedRoom(
+        roomUrl: URL,
+        mapDetail: MapDetail,
+        options: { skipCameraPage?: boolean; enableChat?: boolean } = {},
+    ): Room {
+        const room = new Room(roomUrl);
+        room._mapUrl = mapDetail.mapUrl;
+        room._wamUrl = mapDetail.wamUrl;
+        room._authenticationMandatory = false;
+        room._isLogged = false;
+        room._skipCameraPage = options.skipCameraPage ?? true;
+        room._enableChat = options.enableChat ?? false;
+        room._isMatrixChatEnabled = false;
+        room._enableChatUpload = false;
+        room._enableChatOnlineList = false;
+        room._enableChatDisconnectedList = false;
+        room._enableSay = false;
+        room._enableIssueReport = false;
+        return room;
+    }
+
     public static getRoomPathFromExitUrl(exitUrl: string, currentRoomUrl: string): URL {
         const url = new URL(exitUrl, currentRoomUrl);
         return url;

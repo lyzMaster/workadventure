@@ -1,0 +1,10 @@
+{
+    "version": "2.1.0",
+    "mapUrl": "./map.tmj",
+    "entities": {},
+    "areas": [],
+    "entityCollections": [
+        { "url": "../collections/FurnitureCollection.json", "type": "file" },
+        { "url": "../collections/OfficeCollection.json", "type": "file" }
+    ]
+}

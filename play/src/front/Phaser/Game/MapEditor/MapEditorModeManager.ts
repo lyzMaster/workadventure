@@ -30,6 +30,8 @@ import { TrashEditorTool } from "./Tools/TrashEditorTool";
 import { ExplorerTool } from "./Tools/ExplorerTool";
 import { CloseTool } from "./Tools/CloseTool";
 import { UpdateAreaFrontCommand } from "./Commands/Area/UpdateAreaFrontCommand";
+import type { MapEditTransport } from "./MapEditTransport";
+import { OnlineMapEditTransport } from "./OnlineMapEditTransport";
 
 export enum EditorToolName {
     AreaEditor = "AreaEditor",
@@ -87,6 +89,7 @@ export class MapEditorModeManager {
         scene: GameScene,
         private _isInsidePersonalAreaStore = isInsidePersonalAreaStore,
         private _personalAreaDataStore = personalAreaDataStore,
+        private readonly mapEditTransport: MapEditTransport = new OnlineMapEditTransport(() => scene.connection),
     ) {
         this.scene = scene;
 
@@ -133,18 +136,23 @@ export class MapEditorModeManager {
         await this.isReverting;
         // Commands are throttled. Only one at a time.
         return (this.currentRunningCommand = this.currentRunningCommand.then(async () => {
-            const delay = 0;
             try {
                 await command.execute();
-                this.emitMapEditorUpdate(command, delay);
+                const result = await this.mapEditTransport.submit(command);
+                if (!result.ok) {
+                    await command.getUndoCommand().execute();
+                    throw new Error(`Map edit ${result.code}: ${result.message}`);
+                }
 
                 if (!(command instanceof UpdateWAMSettingCommand)) {
                     // if we are not at the end of commands history and perform an action, get rid of commands later in history than our current point in time
                     if (this.currentCommandIndex !== this.localCommandsHistory.length - 1) {
                         this.localCommandsHistory.splice(this.currentCommandIndex + 1);
                     }
-                    this.pendingCommands.push(command);
-                    logger("adding command to pendingList : ", command);
+                    if (this.mapEditTransport.acknowledgement === "remote") {
+                        this.pendingCommands.push(command);
+                        logger("adding command to pendingList : ", command);
+                    }
                     this.localCommandsHistory.push(command);
                     this.currentCommandIndex += 1;
                 }
@@ -186,15 +194,17 @@ export class MapEditorModeManager {
             const command = this.localCommandsHistory[this.currentCommandIndex];
             const undoCommand = command.getUndoCommand();
             await undoCommand.execute();
-            this.pendingCommands.push(undoCommand);
-            logger("adding command to pendingList : ", undoCommand);
-
-            // this should not be called with every change. Use some sort of debounce
-            this.emitMapEditorUpdate(undoCommand);
+            const result = await this.mapEditTransport.submit(undoCommand);
+            if (!result.ok) {
+                await command.execute();
+                throw new Error(`Map edit ${result.code}: ${result.message}`);
+            }
+            if (this.mapEditTransport.acknowledgement === "remote") {
+                this.pendingCommands.push(undoCommand);
+                logger("adding command to pendingList : ", undoCommand);
+            }
             this.currentCommandIndex -= 1;
         } catch (e) {
-            this.localCommandsHistory.splice(this.currentCommandIndex, 1);
-            this.currentCommandIndex -= 1;
             console.error(e);
             Sentry.captureException(e);
         }
@@ -210,18 +220,17 @@ export class MapEditorModeManager {
         try {
             const command = this.localCommandsHistory[this.currentCommandIndex + 1];
             await command.execute();
-            this.pendingCommands.push(command);
-            logger("adding command to pendingList : ", command);
-
-            // do any necessary changes for active tool interface
-            //this.handleCommandExecutionByTools(commandConfig, true);
-
-            // this should not be called with every change. Use some sort of debounce
-            this.emitMapEditorUpdate(command);
+            const result = await this.mapEditTransport.submit(command);
+            if (!result.ok) {
+                await command.getUndoCommand().execute();
+                throw new Error(`Map edit ${result.code}: ${result.message}`);
+            }
+            if (this.mapEditTransport.acknowledgement === "remote") {
+                this.pendingCommands.push(command);
+                logger("adding command to pendingList : ", command);
+            }
             this.currentCommandIndex += 1;
         } catch (e) {
-            this.localCommandsHistory.splice(this.currentCommandIndex, 1);
-            this.currentCommandIndex -= 1;
             console.error(e);
             Sentry.captureException(e);
         }
@@ -245,6 +254,12 @@ export class MapEditorModeManager {
 
     public isActive(): boolean {
         return this.active;
+    }
+
+    public async flush(): Promise<void> {
+        await this.currentRunningCommand;
+        await this.runningUndoRedoCommand;
+        await this.mapEditTransport.flush?.();
     }
 
     public destroy(): void {
@@ -431,20 +446,6 @@ export class MapEditorModeManager {
         }
 
         return false;
-    }
-
-    private emitMapEditorUpdate(command: FrontCommandInterface, delay = 0): void {
-        const func = () => {
-            if (this.scene.connection === undefined) {
-                throw new Error("No connection attached to room to emit map editor update");
-            }
-            command.emitEvent(this.scene.connection);
-        };
-        if (delay === 0) {
-            func();
-            return;
-        }
-        setTimeout(func, delay);
     }
 
     /**

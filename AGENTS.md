@@ -8,6 +8,7 @@ WorkAdventure is a TypeScript monorepo (npm workspaces) for building collaborati
 - Directories without their own `AGENTS.md` inherit this file and the shared guides below.
 - Package scripts and `.github/workflows/continuous_integration.yml` are the source of truth when a documented command drifts.
 - Run package scripts from that package's directory unless the command explicitly uses `--workspace`.
+- Before modifying code, read the root-level `项目源码分析.md` first to understand the project's source-code logic and architecture context.
 
 ## Main projects
 

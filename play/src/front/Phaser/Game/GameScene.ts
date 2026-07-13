@@ -44,6 +44,7 @@ import { touchScreenManager } from "../../Touch/TouchScreenManager";
 import { PinchManager } from "../UserInput/PinchManager";
 import { waScaleManager } from "../Services/WaScaleManager";
 import { lazyLoadPlayerCharacterTextures } from "../Entity/PlayerTexturesLoadingManager";
+import type { WokaTextureDescriptionInterface } from "../Entity/PlayerTextures";
 import { lazyLoadPlayerCompanionTexture } from "../Companion/CompanionTexturesLoadingManager";
 import { iframeListener } from "../../Api/IframeListener";
 import { coWebsiteManager, coWebsites } from "../../Stores/CoWebsiteStore";
@@ -236,6 +237,7 @@ import { LocateManager } from "./LocateManager";
 import { uiWebsiteManager } from "./UI/UIWebsiteManager";
 import { ScriptingVideoManager } from "./ScriptingVideoManager";
 import { UsernameDomLayer } from "./UsernameDomLayer";
+import type { GameSceneRuntime } from "./GameSceneRuntime";
 
 import Tileset = Phaser.Tilemaps.Tileset;
 import Tilemap = Phaser.Tilemaps.Tilemap;
@@ -440,6 +442,7 @@ export class GameScene extends DirtyScene {
         private _room: Room,
         customKey?: string,
         private _isInsidePersonalAreaStore = isInsidePersonalAreaStore,
+        private readonly runtime?: GameSceneRuntime,
     ) {
         super({
             key: customKey ?? _room.key,
@@ -476,35 +479,35 @@ export class GameScene extends DirtyScene {
 
     //hook preload scene
     preload(): void {
-        //initialize frame event of scripting API
-        this.listenToIframeEvents();
+        if (!this.runtime) {
+            // Online-only scripting, collaboration icons and notification audio.
+            this.listenToIframeEvents();
+            this.load.image("iconFocus", "/resources/icons/icon_focus.png");
+            this.load.image("iconLink", "/resources/icons/icon_link.png");
+            this.load.image("iconListenerMegaphone", "/resources/icons/icon_listener.png");
+            this.load.image("iconSpeakerMegaphone", "/resources/icons/icon_speaker.png");
+            this.load.image("iconSilent", "/resources/icons/icon_silent.png");
+            this.load.image("iconMeeting", "/resources/icons/icon_meeting.png");
 
-        this.load.image("iconFocus", "/resources/icons/icon_focus.png");
-        this.load.image("iconLink", "/resources/icons/icon_link.png");
-        this.load.image("iconListenerMegaphone", "/resources/icons/icon_listener.png");
-        this.load.image("iconSpeakerMegaphone", "/resources/icons/icon_speaker.png");
-        this.load.image("iconSilent", "/resources/icons/icon_silent.png");
-        this.load.image("iconMeeting", "/resources/icons/icon_meeting.png");
-
-        if (touchScreenManager.supportTouchScreen) {
-            this.load.image(joystickBaseKey, joystickBaseImg);
-            this.load.image(joystickThumbKey, joystickThumbImg);
+            if (touchScreenManager.supportTouchScreen) {
+                this.load.image(joystickBaseKey, joystickBaseImg);
+                this.load.image(joystickThumbKey, joystickThumbImg);
+            }
+            const selectedBubbleSound = get(bubbleSoundStore);
+            this.load.audio(
+                `audio-webrtc-in-${selectedBubbleSound}`,
+                `/resources/objects/webrtc-in-${selectedBubbleSound}.mp3`,
+            );
+            this.load.audio(
+                `audio-webrtc-out-${selectedBubbleSound}`,
+                `/resources/objects/webrtc-out-${selectedBubbleSound}.mp3`,
+            );
+            this.load.audio("audio-report-message", "/resources/objects/report-message.mp3");
+            this.load.audio("audio-cloud", "/resources/objects/cloud.mp3");
+            this.load.audio("new-message", "/resources/objects/new-message.mp3");
+            this.load.audio("meeting-in", "/resources/objects/meeting-in.wav");
+            this.load.audio("meeting-out", "/resources/objects/meeting-out.wav");
         }
-        // Load the selected bubble sound from bubbleSoundStore
-        const selectedBubbleSound = get(bubbleSoundStore);
-        this.load.audio(
-            `audio-webrtc-in-${selectedBubbleSound}`,
-            `/resources/objects/webrtc-in-${selectedBubbleSound}.mp3`,
-        );
-        this.load.audio(
-            `audio-webrtc-out-${selectedBubbleSound}`,
-            `/resources/objects/webrtc-out-${selectedBubbleSound}.mp3`,
-        );
-        this.load.audio("audio-report-message", "/resources/objects/report-message.mp3");
-        this.load.audio("audio-cloud", "/resources/objects/cloud.mp3");
-        this.load.audio("new-message", "/resources/objects/new-message.mp3");
-        this.load.audio("meeting-in", "/resources/objects/meeting-in.wav");
-        this.load.audio("meeting-out", "/resources/objects/meeting-out.wav");
 
         this.sound.pauseOnBlur = false;
 
@@ -575,9 +578,12 @@ export class GameScene extends DirtyScene {
             const absoluteWamFileUrl = new URL(this.wamUrlFile, window.location.href).toString();
 
             this.superLoad.loadPromise(
-                axiosWithRetry.get(absoluteWamFileUrl).then((response) => {
+                axiosWithRetry.get(absoluteWamFileUrl).then(async (response) => {
                     try {
-                        this.wamFile = wamFileMigration.migrate(response.data);
+                        const migratedWam = wamFileMigration.migrate(response.data);
+                        this.wamFile = this.runtime?.prepareWam
+                            ? await this.runtime.prepareWam(migratedWam)
+                            : migratedWam;
                         this.mapUrlFile = new URL(this.wamFile.mapUrl, absoluteWamFileUrl).toString();
                         this.doLoadTMJFile(this.mapUrlFile);
                         this.loadEntityCollections();
@@ -656,7 +662,9 @@ export class GameScene extends DirtyScene {
 
         this.outlineManager = new OutlineManager(this);
         gameManager.gameSceneIsCreated(this);
-        urlManager.pushRoomIdToUrl(this._room);
+        if (!this.runtime) {
+            urlManager.pushRoomIdToUrl(this._room);
+        }
         analyticsClient.enteredRoom(this._room.id, this._room.group);
         contactPageStore.set(this._room.contactPage);
 
@@ -817,7 +825,12 @@ export class GameScene extends DirtyScene {
 
         biggestAvailableAreaStore.recompute();
         if (ENABLE_MAP_EDITOR) {
-            this.mapEditorModeManager = new MapEditorModeManager(this);
+            this.mapEditorModeManager = new MapEditorModeManager(
+                this,
+                undefined,
+                undefined,
+                this.runtime?.createMapEditTransport?.(this),
+            );
         }
 
         this.configureTileAnimations();
@@ -907,6 +920,15 @@ export class GameScene extends DirtyScene {
 
         this.gameMapPropertiesListener = new GameMapPropertiesListener(this, this.gameMapFrontWrapper);
         this.gameMapPropertiesListener.register();
+
+        if (this.runtime) {
+            this.runtime.initialize(this).catch((error: unknown) => {
+                console.error("Injected GameScene runtime initialization failed", error);
+                Sentry.captureException(error);
+                errorScreenStore.setException(error);
+            });
+            return;
+        }
 
         if (!this._room.isDisconnected()) {
             try {
@@ -1036,6 +1058,46 @@ export class GameScene extends DirtyScene {
                 tweenDurationMs: 250,
             });
         }
+    }
+
+    /**
+     * Completes the part of scene startup that is inherently local: character
+     * assets, spawn position, input, collision and camera. Online startup calls
+     * the same primitives after the room socket answers; offline runtimes call
+     * this method directly.
+     */
+    public async initializeLocalPlayer(characterTextures: WokaTextureDescriptionInterface[]): Promise<void> {
+        await this.gameMapFrontWrapper.initializedPromise.promise;
+
+        const gameMapAreas = this.getGameMap().getWamFile()?.getGameMapAreas();
+        if (gameMapAreas) {
+            this.entityPermissions = new EntityPermissions(gameMapAreas, [], true, localUserStore.getLocalUser()?.uuid);
+            this.entityPermissionsDeferred.resolve(this.entityPermissions);
+        }
+
+        const textures = await lazyLoadPlayerCharacterTextures(this.superLoad, characterTextures);
+        this.currentPlayerTexturesResolve(textures);
+
+        const startPosition = computeStartPosition(
+            this.gameMapFrontWrapper,
+            this.mapFile,
+            this.runtime?.getDefaultSpawn?.() ?? this.initPosition,
+            urlManager.getStartPositionNameFromUrl(),
+        );
+        this.createCurrentPlayer(startPosition);
+        this.activatablesManager = new ActivatablesManager(this.CurrentPlayer);
+        this.cameraManager.startFollowPlayer(this.CurrentPlayer, 0);
+        this.CurrentPlayer.on(hasMovedEventName, (event: HasPlayerMovedInterface) => {
+            this.handleCurrentPlayerHasMovedEvent(event);
+        });
+
+        this.hasJoinedRoom = true;
+        this.landingAreas = this.getGameMap().getWamFile()?.getGameMapAreas().getAreasOnPosition(startPosition) ?? [];
+        this.gameMapFrontWrapper.setPosition(startPosition.x, startPosition.y);
+        this.gameMapFrontWrapper.initializeAreaManager([], true);
+        gameSceneIsLoadedStore.set(true);
+        this.sceneReadyToStartDeferred.resolve();
+        this.markDirty();
     }
 
     public getMapUrl(): string {
@@ -1793,7 +1855,7 @@ export class GameScene extends DirtyScene {
         const customEntityCollectionUrl = this.getCustomEntityCollectionUrl();
         const collectionDescriptors: { url: string; type: EntityPrefabType }[] = this.wamFile.entityCollections.map(
             (collectionUrl) => ({
-                url: collectionUrl.url,
+                url: new URL(collectionUrl.url, this.wamUrlFile).toString(),
                 type: "Default",
             }),
         );

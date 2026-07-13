@@ -16,6 +16,7 @@
     } from "../../../Stores/MapEditorStore";
     import Input from "../../Input/Input.svelte";
     import ButtonClose from "../../Input/ButtonClose.svelte";
+    import type { GameScene } from "../../../Phaser/Game/GameScene";
     import CustomEntityEditionForm from "./CustomEntityEditionForm/CustomEntityEditionForm.svelte";
     import EntitiesGrid from "./EntitiesGrid.svelte";
     import EntityImage from "./EntityItem/EntityImage.svelte";
@@ -25,8 +26,15 @@
     import TagListItem from "./TagListItem.svelte";
     import { IconChevronLeft, IconPencil } from "@wa-icons";
 
-    const entitiesCollectionsManager = gameManager.getCurrentGameScene().getEntitiesCollectionsManager();
-    const entitiesPrefabsVariants = entitiesCollectionsManager.getEntitiesPrefabsVariantStore();
+    interface Props {
+        allowUpload?: boolean;
+        scene?: GameScene;
+    }
+
+    let { allowUpload = true, scene = gameManager.getCurrentGameScene() }: Props = $props();
+
+    const getEntitiesCollectionsManager = () => scene.getEntitiesCollectionsManager();
+    const entitiesPrefabsVariants = $derived(getEntitiesCollectionsManager().getEntitiesPrefabsVariantStore());
     const MOST_USED_CATEGORY_LIMIT = 12;
 
     let pickedEntity: EntityPrefab | undefined = $state(undefined);
@@ -41,7 +49,7 @@
         },
     );
 
-    const entitiesPrefabsVariantStoreUnsubscriber = entitiesCollectionsManager
+    const entitiesPrefabsVariantStoreUnsubscriber = getEntitiesCollectionsManager()
         .getEntitiesPrefabsVariantStore()
         .subscribe((entitiesPrefabsVariants) => {
             if (pickedEntityVariant) {
@@ -152,12 +160,7 @@
     }
 
     function getMostUsedEntitiesPrefabsVariants(entitiesPrefabsVariants: EntityVariant[]): EntityVariant[] {
-        const entities = gameManager
-            .getCurrentGameScene()
-            .getGameMap()
-            .getWamFile()
-            ?.getGameMapEntities()
-            .getEntities();
+        const entities = scene.getGameMap().getWamFile()?.getGameMapEntities().getEntities();
 
         if (!entities) {
             return [];
@@ -369,7 +372,7 @@
             {/if}
         {/if}
     </div>
-    {#if pickedEntity === undefined}
+    {#if allowUpload && pickedEntity === undefined}
         <EntityUpload />
     {/if}
 </div>
