@@ -1,20 +1,19 @@
 import {
     MegaphoneSettings,
     UpdateWAMSettingCommand,
+    type UpdateWamSettingsCommandDto,
     type WAMFileFormat,
     WAMSettingsUtils,
 } from "@workadventure/map-editor";
 
-import type { UpdateWAMSettingsMessage } from "@workadventure/messages/src/ts-proto-generated/messages";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 import { localUserStore } from "../../../../../Connection/LocalUserStore";
 import { megaphoneCanBeUsedStore, megaphoneSpaceSettingsStore } from "../../../../../Stores/MegaphoneStore";
 
 export class UpdateWAMSettingFrontCommand extends UpdateWAMSettingCommand implements FrontCommandInterface {
     public constructor(
         wam: WAMFileFormat,
-        updateWAMSettingsMessage: UpdateWAMSettingsMessage,
+        updateWAMSettingsMessage: Omit<UpdateWamSettingsCommandDto, "type" | "commandId" | "sceneId">,
         private userTags: string[],
         private roomUrl: string,
         id?: string,
@@ -23,33 +22,23 @@ export class UpdateWAMSettingFrontCommand extends UpdateWAMSettingCommand implem
     }
 
     public getUndoCommand(): UpdateWAMSettingFrontCommand {
-        if (this.updateWAMSettingsMessage.message?.$case === "updateMegaphoneSettingMessage") {
+        if (this.updateWAMSettingsMessage.message?.megaphone !== undefined) {
             const previousMegaphone = this.oldConfig?.megaphone;
             return new UpdateWAMSettingFrontCommand(
                 this.wam,
                 {
-                    message: {
-                        $case: "updateMegaphoneSettingMessage",
-                        updateMegaphoneSettingMessage: {
-                            settings: previousMegaphone ? { ...previousMegaphone } : undefined,
-                        },
-                    },
+                    message: { megaphone: previousMegaphone ? { ...previousMegaphone } : undefined },
                 },
                 this.userTags,
                 this.roomUrl,
             );
         }
-        if (this.updateWAMSettingsMessage.message?.$case === "updateRecordingSettingMessage") {
+        if (this.updateWAMSettingsMessage.message?.recording !== undefined) {
             const previousRecording = this.oldConfig?.recording;
             return new UpdateWAMSettingFrontCommand(
                 this.wam,
                 {
-                    message: {
-                        $case: "updateRecordingSettingMessage",
-                        updateRecordingSettingMessage: {
-                            settings: previousRecording ? { ...previousRecording } : undefined,
-                        },
-                    },
+                    message: { recording: previousRecording ? { ...previousRecording } : undefined },
                 },
                 this.userTags,
                 this.roomUrl,
@@ -62,8 +51,8 @@ export class UpdateWAMSettingFrontCommand extends UpdateWAMSettingCommand implem
     public async execute(): Promise<void> {
         await super.execute();
 
-        const message: UpdateWAMSettingsMessage["message"] = this.updateWAMSettingsMessage.message;
-        if (message?.$case === "updateMegaphoneSettingMessage" || message?.$case === "updateRecordingSettingMessage") {
+        const message = this.updateWAMSettingsMessage.message;
+        if (message?.megaphone !== undefined || message?.recording !== undefined) {
             const megaphoneSettings = MegaphoneSettings.optional().parse(this.wam.settings?.megaphone);
 
             megaphoneCanBeUsedStore.set(WAMSettingsUtils.canUseMegaphone(this.wam.settings, this.userTags));
@@ -89,7 +78,12 @@ export class UpdateWAMSettingFrontCommand extends UpdateWAMSettingCommand implem
         }
     }
 
-    public emitEvent(roomConnection: RoomConnection): void {
-        roomConnection.emitUpdateWAMSettingMessage(this.commandId, this.updateWAMSettingsMessage);
+    public toDto(sceneId: string): UpdateWamSettingsCommandDto {
+        return {
+            type: "wam.settings.update",
+            commandId: this.commandId,
+            sceneId,
+            message: this.updateWAMSettingsMessage.message,
+        };
     }
 }

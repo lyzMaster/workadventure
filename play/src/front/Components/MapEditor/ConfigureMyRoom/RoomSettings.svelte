@@ -65,15 +65,20 @@
             dynamicStrings.error.confirmSave = false;
             dynamicStrings.error.name = false;
 
-            const roomConnection = gameManager.getCurrentGameScene()?.connection;
-            if (roomConnection == undefined) throw new Error("No connection");
-            new UpdateWAMMetadataFrontCommand({
-                name,
-                description,
-                thumbnail,
-                copyright,
-                tags: tags != undefined && tags.length > 1 ? tags.map((tag) => tag.value).join(",") : undefined,
-            }).emitEvent(roomConnection);
+            const scene = gameManager.getCurrentGameScene();
+            const wamFile = scene.wamFile ?? scene.getGameMap().getWamFile()?.getWam();
+            if (!wamFile) {
+                throw new Error("No WAM file");
+            }
+            await scene.getMapEditorModeManager().executeCommand(
+                new UpdateWAMMetadataFrontCommand(wamFile, {
+                    name,
+                    description,
+                    thumbnail,
+                    copyright,
+                    tags: tags != undefined && tags.length > 1 ? tags.map((tag) => tag.value).join(",") : undefined,
+                }),
+            );
             return Promise.resolve($LL.mapEditor.settings.room.actions.success());
         } catch (e) {
             console.error(e);

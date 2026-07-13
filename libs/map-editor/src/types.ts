@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CustomEntityDirection } from "@workadventure/messages";
+import type { CustomEntityDirection } from "./Commands/Dto/EntityCommandDto";
 
 export type AtLeast<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 
@@ -532,13 +532,13 @@ export enum GameMapProperties {
 
 export const mapCustomEntityDirectionToDirection = (uploadEntityMessageDirection: CustomEntityDirection) => {
     switch (uploadEntityMessageDirection) {
-        case CustomEntityDirection.Up:
+        case "up":
             return Direction.Up;
-        case CustomEntityDirection.Right:
+        case "right":
             return Direction.Right;
-        case CustomEntityDirection.Down:
+        case "down":
             return Direction.Down;
-        case CustomEntityDirection.Left:
+        case "left":
             return Direction.Left;
         default:
             return Direction.Down;

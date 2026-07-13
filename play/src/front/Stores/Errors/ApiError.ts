@@ -1,4 +1,6 @@
-import type { ErrorApiData } from "@workadventure/messages";
+import type { ErrorScreenMessage } from "../ErrorScreenStore";
+
+export type ErrorApiData = ErrorScreenMessage & { status?: number };
 
 export class ApiError extends Error {
     static NAME = "ApiError";

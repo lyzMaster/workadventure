@@ -2,12 +2,7 @@ import * as Sentry from "@sentry/svelte";
 import * as Phaser from "phaser";
 import { get } from "svelte/store";
 import type { CancelablePromise } from "cancelable-promise";
-import {
-    AskPositionMessage_AskType,
-    type PositionMessage,
-    type PositionMessage_Direction,
-    type SayMessage,
-} from "@workadventure/messages";
+import type { CharacterPosition, CharacterSayType, Direction } from "@workadventure/game-model";
 import type { WokaMenuAction } from "../../Stores/WokaMenuStore";
 import { wokaMenuStore } from "../../Stores/WokaMenuStore";
 import { Character } from "../Entity/Character";
@@ -50,13 +45,13 @@ export class RemotePlayer extends Character implements ActivatableInterface {
         y: number,
         name: string,
         texturesPromise: CancelablePromise<string[]>,
-        direction: PositionMessage_Direction,
+        direction: Direction,
         moving: boolean,
         visitCardUrl: string | null,
         companionTexturePromise: CancelablePromise<string> | undefined,
         activationRadius?: number,
         private chatID: string | undefined = undefined,
-        sayMessage?: SayMessage,
+        sayMessage?: { message: string; type: CharacterSayType },
     ) {
         super(Scene, x, y, texturesPromise, name, direction, moving, 1, true, companionTexturePromise);
 
@@ -75,7 +70,7 @@ export class RemotePlayer extends Character implements ActivatableInterface {
         this.pathFollowingUpdateCallback = (_time: number, delta: number) => this.followPath(delta);
     }
 
-    public updatePosition(position: PositionMessage): void {
+    public updatePosition(position: CharacterPosition): void {
         this.stopMoveTo();
         this.playAnimation(position.direction, position.moving);
         this.setPosition(position.x, position.y);
@@ -238,7 +233,7 @@ export class RemotePlayer extends Character implements ActivatableInterface {
                         this.scene.connection.emitAskPosition(
                             this.userUuid,
                             this.scene.roomUrl,
-                            AskPositionMessage_AskType.MOVE,
+                            "move",
                             this.userId,
                         );
                 },

@@ -1,13 +1,14 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
-    import { SelectCharacterSceneName } from "../../Phaser/Login/SelectCharacterScene";
     import { areCharacterTexturesValid } from "../../Connection/LocalUserUtils";
     import { analyticsClient } from "../../Administration/AnalyticsClient";
     import { gameManager } from "../../Phaser/Game/GameManager";
-    import { connectionManager } from "../../Connection/ConnectionManager";
+    import { connectionManager } from "../../Stores/StandaloneConnectionManager";
     import { selectCharacterSceneVisibleStore } from "../../Stores/SelectCharacterStore";
     import WokaSelectScene from "./WokaSelectScene.svelte";
     import WokaCustomizeScene from "./WokaCustomizeScene.svelte";
+
+    const SelectCharacterSceneName = "SelectCharacterScene";
 
     let buildOwnWoka = $state(false);
     let error: string | null = $state(null);

@@ -1,12 +1,10 @@
 import * as Phaser from "phaser";
 import type { CancelablePromise } from "cancelable-promise";
-import type { CompanionTexture } from "@workadventure/messages";
-import { CompanionTextureCollection } from "@workadventure/messages";
 import { gameManager } from "../Game/GameManager";
 import { localUserStore } from "../../Connection/LocalUserStore";
 import type { SuperLoaderPlugin } from "../Services/SuperLoaderPlugin";
 import { ABSOLUTE_PUSHER_URL } from "../../Enum/ComputedConst";
-import type { CompanionTextureDescriptionInterface, CompanionTextures } from "./CompanionTextures";
+import type { CompanionTexture, CompanionTextureCollection, CompanionTextureDescriptionInterface, CompanionTextures } from "./CompanionTextures";
 
 import LoaderPlugin = Phaser.Loader.LoaderPlugin;
 
@@ -51,7 +49,7 @@ export class CompanionTexturesLoadingManager {
                     withCredentials: true,
                 },
                 (_key, _type, data) => {
-                    processListCallback(CompanionTextureCollection.array().parse(data));
+                    processListCallback(JSON.parse(data) as CompanionTextureCollection[]);
                 },
             )
             .catch((e: unknown) => {

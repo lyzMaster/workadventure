@@ -1,6 +1,5 @@
 import * as Phaser from "phaser";
-import type { AreaData, AtLeast } from "@workadventure/map-editor";
-import type { EditMapCommandMessage } from "@workadventure/messages";
+import type { AreaData, AtLeast, LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
 import { v4 as uuid } from "uuid";
@@ -121,18 +120,16 @@ export class AreaEditorTool extends MapEditorTool {
         this.scene.input.setDefaultCursor("auto");
     }
 
-    public async handleIncomingCommandMessage(editMapCommandMessage: EditMapCommandMessage): Promise<void> {
-        const commandId = editMapCommandMessage.id;
-        switch (editMapCommandMessage.editMapMessage?.message?.$case) {
-            case "modifyAreaMessage": {
-                const data = editMapCommandMessage.editMapMessage?.message.modifyAreaMessage;
+    public async handleIncomingCommandMessage(editMapCommandMessage: LocalMapEditorCommand): Promise<void> {
+        const commandId = editMapCommandMessage.commandId;
+        switch (editMapCommandMessage.type) {
+            case "area.update": {
                 // execute command locally
                 await this.mapEditorModeManager.executeLocalCommand(
                     new UpdateAreaFrontCommand(
                         this.scene.getGameMap().getWamFile()!,
                         {
-                            ...data,
-                            properties: data.modifyProperties ? data.properties : undefined,
+                            ...editMapCommandMessage.patch,
                         },
                         commandId,
                         undefined,
@@ -142,10 +139,9 @@ export class AreaEditorTool extends MapEditorTool {
                 );
                 break;
             }
-            case "createAreaMessage": {
-                const data = editMapCommandMessage.editMapMessage?.message.createAreaMessage;
+            case "area.create": {
                 const config: AreaData = {
-                    ...data,
+                    ...editMapCommandMessage.area,
                     visible: true,
                 };
                 // execute command locally
@@ -161,13 +157,12 @@ export class AreaEditorTool extends MapEditorTool {
                 );
                 break;
             }
-            case "deleteAreaMessage": {
-                const data = editMapCommandMessage.editMapMessage?.message.deleteAreaMessage;
+            case "area.delete": {
                 // execute command locally
                 await this.mapEditorModeManager.executeLocalCommand(
                     new DeleteAreaFrontCommand(
                         this.scene.getGameMap().getWamFile()!,
-                        data.id,
+                        editMapCommandMessage.areaId,
                         commandId,
                         this,
                         this.scene.getGameMapFrontWrapper(),

@@ -1,6 +1,5 @@
 import { Subject } from "rxjs";
 import * as Sentry from "@sentry/svelte";
-import { availabilityStatusToJSON } from "@workadventure/messages";
 import type { BanEvent, ChatEvent } from "@workadventure/shared-utils";
 import { KLAXOON_ACTIVITY_PICKER_EVENT } from "@workadventure/shared-utils";
 import type { StartWritingEvent, StopWritingEvent } from "@workadventure/shared-utils/src/Events/WritingEvent";
@@ -17,7 +16,7 @@ import type { MessageUserJoined } from "../Connection/ConnexionModels";
 import { analyticsClient } from "../Administration/AnalyticsClient";
 import { bannerStore, requestVisitCardsStore } from "../Stores/GameStore";
 import { modalIframeStore, modalVisibilityStore } from "../Stores/ModalStore";
-import { connectionManager } from "../Connection/ConnectionManager";
+import { connectionManager } from "../Stores/StandaloneConnectionManager";
 
 import { gameManager } from "../Phaser/Game/GameManager";
 import type { OpenPopupEvent } from "./Events/OpenPopupEvent";
@@ -38,6 +37,8 @@ import type { WasCameraUpdatedEvent } from "./Events/WasCameraUpdatedEvent";
 import type { CameraSetEvent } from "./Events/CameraSetEvent";
 import type { CameraFollowPlayerEvent } from "./Events/CameraFollowPlayerEvent";
 import type { AddActionsMenuKeyToRemotePlayerEvent } from "./Events/AddActionsMenuKeyToRemotePlayerEvent";
+
+const availabilityStatusToJSON = (availabilityStatus: string): string => availabilityStatus;
 import type { ActionsMenuActionClickedEvent } from "./Events/ActionsMenuActionClickedEvent";
 import type { RemoveActionsMenuKeyFromRemotePlayerEvent } from "./Events/RemoveActionsMenuKeyFromRemotePlayerEvent";
 import type { SetAreaPropertyEvent } from "./Events/SetAreaPropertyEvent";

@@ -1,4 +1,4 @@
-import type { AvailabilityStatus } from "@workadventure/messages";
+import type { AvailabilityStatus } from "@workadventure/game-model";
 import type { StatusStrategyInterface } from "./StatusStrategyInterface";
 import { BasicStatusStrategy } from "./StatusStrategy/BasicStatusStrategy";
 import type { StatusRulesVerificationInterface } from "./statusRules";

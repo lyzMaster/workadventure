@@ -1,8 +1,7 @@
-import type { AreaData, AtLeast, WamFile } from "@workadventure/map-editor";
+import type { AreaData, AtLeast, UpdateAreaCommandDto, WamFile } from "@workadventure/map-editor";
 import { UpdateAreaCommand } from "@workadventure/map-editor";
 import type { AreaEditorTool } from "../../Tools/AreaEditorTool";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 import type { GameMapFrontWrapper } from "../../../GameMap/GameMapFrontWrapper";
 
 export class UpdateAreaFrontCommand extends UpdateAreaCommand implements FrontCommandInterface {
@@ -41,7 +40,13 @@ export class UpdateAreaFrontCommand extends UpdateAreaCommand implements FrontCo
         this.newConfig = newConfig;
     }
 
-    public emitEvent(roomConnection: RoomConnection): void {
-        roomConnection.emitMapEditorModifyArea(this.commandId, this.newConfig);
+    public toDto(sceneId: string): UpdateAreaCommandDto {
+        return {
+            type: "area.update",
+            commandId: this.commandId,
+            sceneId,
+            areaId: this.newConfig.id,
+            patch: this.newConfig,
+        };
     }
 }

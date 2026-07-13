@@ -1,9 +1,8 @@
-import type { AreaData, WamFile } from "@workadventure/map-editor";
+import type { AreaData, CreateAreaCommandDto, WamFile } from "@workadventure/map-editor";
 import { CreateAreaCommand } from "@workadventure/map-editor";
 import type { AreaEditorTool } from "../../Tools/AreaEditorTool";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
 import type { TrashEditorTool } from "../../Tools/TrashEditorTool";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 import type { GameMapFrontWrapper } from "../../../GameMap/GameMapFrontWrapper";
 import { DeleteAreaFrontCommand } from "./DeleteAreaFrontCommand";
 
@@ -35,7 +34,12 @@ export class CreateAreaFrontCommand extends CreateAreaCommand implements FrontCo
         );
     }
 
-    public emitEvent(roomConnection: RoomConnection): void {
-        roomConnection.emitMapEditorCreateArea(this.commandId, this.areaConfig);
+    public toDto(sceneId: string): CreateAreaCommandDto {
+        return {
+            type: "area.create",
+            commandId: this.commandId,
+            sceneId,
+            area: this.areaConfig,
+        };
     }
 }

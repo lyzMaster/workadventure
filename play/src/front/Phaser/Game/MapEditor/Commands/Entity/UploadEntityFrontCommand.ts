@@ -1,6 +1,9 @@
-import { EntityRawPrefab, mapCustomEntityDirectionToDirection, UploadEntityCommand } from "@workadventure/map-editor";
-import type { UploadEntityMessage } from "@workadventure/messages";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
+import {
+    EntityRawPrefab,
+    mapCustomEntityDirectionToDirection,
+    UploadEntityCommand,
+    type UploadEntityCommandDto,
+} from "@workadventure/map-editor";
 import { gameManager } from "../../../GameManager";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 import type { EntitiesCollectionsManager } from "../../EntitiesCollectionsManager";
@@ -9,15 +12,20 @@ import { DeleteCustomEntityFrontCommand } from "./DeleteCustomEntityFrontCommand
 
 export class UploadEntityFrontCommand extends UploadEntityCommand implements FrontCommand {
     constructor(
-        uploadEntityMessage: UploadEntityMessage,
+        uploadEntityMessage: Omit<UploadEntityCommandDto, "type" | "commandId" | "sceneId">,
         private entitiesManager: EntitiesManager,
         private entitiesCollectionManager: EntitiesCollectionsManager,
     ) {
         super(uploadEntityMessage);
     }
 
-    emitEvent(roomConnection: RoomConnection): void {
-        roomConnection.emitMapEditorUploadEntity(this.commandId, this.uploadEntityMessage);
+    toDto(sceneId: string): UploadEntityCommandDto {
+        return {
+            ...this.uploadEntityMessage,
+            type: "entity.upload",
+            commandId: this.commandId,
+            sceneId,
+        };
     }
 
     execute(): Promise<void> {

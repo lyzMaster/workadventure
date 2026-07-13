@@ -1,8 +1,7 @@
-import type { WamFile } from "@workadventure/map-editor";
+import type { DeleteAreaCommandDto, WamFile } from "@workadventure/map-editor";
 import { DeleteAreaCommand } from "@workadventure/map-editor";
 import type { AreaEditorTool } from "../../Tools/AreaEditorTool";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 import type { TrashEditorTool } from "../../Tools/TrashEditorTool";
 import { VoidFrontCommand } from "../VoidFrontCommand";
 import type { GameMapFrontWrapper } from "../../../GameMap/GameMapFrontWrapper";
@@ -44,7 +43,12 @@ export class DeleteAreaFrontCommand extends DeleteAreaCommand implements FrontCo
         );
     }
 
-    public emitEvent(roomConnection: RoomConnection): void {
-        roomConnection.emitMapEditorDeleteArea(this.commandId, this.areaId);
+    public toDto(sceneId: string): DeleteAreaCommandDto {
+        return {
+            type: "area.delete",
+            commandId: this.commandId,
+            sceneId,
+            areaId: this.areaId,
+        };
     }
 }

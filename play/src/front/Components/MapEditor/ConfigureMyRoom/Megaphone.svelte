@@ -94,22 +94,19 @@
                 throw new Error("Error, no wam file");
             }
             await executeUpdateWAMSettings({
-                $case: "updateMegaphoneSettingMessage",
-                updateMegaphoneSettingMessage: {
-                    settings: {
-                        enabled,
-                        scope,
-                        title,
-                        rights: (rights || []).map((right) => right.value),
-                        audienceVideoFeedbackActivated: audienceVideoFeedbackActivated,
-                        notificationSoundUrl,
-                        enableSoundNotifications,
-                        recording: {
-                            enabled: recordingEnabled,
-                            rights: (recordingRights || []).map((right) => right.value),
-                        },
-                    } satisfies MegaphoneSettings,
-                },
+                megaphone: {
+                    enabled,
+                    scope,
+                    title,
+                    rights: (rights || []).map((right) => right.value),
+                    audienceVideoFeedbackActivated: audienceVideoFeedbackActivated,
+                    notificationSoundUrl,
+                    enableSoundNotifications,
+                    recording: {
+                        enabled: recordingEnabled,
+                        rights: (recordingRights || []).map((right) => right.value),
+                    },
+                } satisfies MegaphoneSettings,
             });
 
             return $LL.mapEditor.settings.megaphone.inputs.error.save.success();

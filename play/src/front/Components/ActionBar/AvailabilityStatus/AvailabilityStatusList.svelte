@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { AvailabilityStatus } from "@workadventure/messages";
+    import { AvailabilityStatus } from "@workadventure/game-model";
     import { resetAllStatusStoreExcept } from "../../../Rules/StatusRules/statusChangerFunctions";
     import type { RequestedStatus } from "../../../Rules/StatusRules/statusRules";
     import { availabilityStatusStore } from "../../../Stores/MediaStore";

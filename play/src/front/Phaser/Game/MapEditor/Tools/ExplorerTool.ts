@@ -1,9 +1,8 @@
 import * as Phaser from "phaser";
-import type { EditMapCommandMessage } from "@workadventure/messages";
 import debug from "debug";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
-import type { AreaData, AreaDescriptionPropertyData } from "@workadventure/map-editor";
+import type { AreaData, AreaDescriptionPropertyData, LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
 import { analyticsClient } from "../../../../Administration/AnalyticsClient";
 import {
@@ -281,7 +280,7 @@ export class ExplorerTool implements MapEditorTool {
     public handleKeyDownEvent(event: KeyboardEvent): void {
         logger("handleKeyDownEvent => Method not implemented.");
     }
-    public handleIncomingCommandMessage(editMapCommandMessage: EditMapCommandMessage): Promise<void> {
+    public handleIncomingCommandMessage(editMapCommandMessage: LocalMapEditorCommand): Promise<void> {
         // Refresh the entities store
         mapExplorationEntitiesStore.set(
             gameManager.getCurrentGameScene().getGameMapFrontWrapper().getEntitiesManager().getEntities(),

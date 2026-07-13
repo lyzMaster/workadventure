@@ -1,6 +1,4 @@
 import type { Subscription } from "rxjs";
-import type { MeetingInvitationRequestReceivedMessage } from "@workadventure/messages";
-import { AskPositionMessage_AskType } from "@workadventure/messages";
 import { get } from "svelte/store";
 import type { RoomConnection } from "../../Connection/RoomConnection";
 import { meetingInvitationRequestStore } from "../../Stores/MeetingInvitationStore";
@@ -10,6 +8,12 @@ import { gameManager } from "../../Phaser/Game/GameManager";
 import MeetingInvitationDeclinedToast from "../../Components/MeetingInvitation/MeetingInvitationDeclinedToast.svelte";
 import MeetingInvitationAcceptedToast from "../../Components/MeetingInvitation/MeetingInvitationAcceptToast.svelte";
 import MeetingInvitationLimitToast from "../../Components/MeetingInvitation/MeetingInvitationLimitToast.svelte";
+
+type MeetingInvitationRequestReceivedMessage = {
+    senderUserId: number;
+    senderUserUuid: string;
+    senderPlayUri: string;
+};
 
 const MEETING_INVITATION_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const MEETING_INVITATION_MAX_REQUESTS = 50;
@@ -98,7 +102,7 @@ export class InviteManager {
         this.connection.emitAskPosition(
             request.senderUserUuid,
             request.senderPlayUri,
-            AskPositionMessage_AskType.MOVE,
+            "move",
             request.senderUserId,
         );
     }

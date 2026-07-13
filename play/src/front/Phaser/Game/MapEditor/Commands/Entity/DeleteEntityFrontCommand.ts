@@ -1,8 +1,7 @@
-import type { EntityDimensions, WamFile, WAMEntityData } from "@workadventure/map-editor";
+import type { DeleteEntityCommandDto, EntityDimensions, WamFile, WAMEntityData } from "@workadventure/map-editor";
 import { DeleteEntityCommand } from "@workadventure/map-editor";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 import { VoidFrontCommand } from "../VoidFrontCommand";
 import { CreateEntityFrontCommand } from "./CreateEntityFrontCommand";
 
@@ -50,7 +49,14 @@ export class DeleteEntityFrontCommand extends DeleteEntityCommand implements Fro
         );
     }
 
-    public emitEvent(roomConnection: RoomConnection): void {
-        roomConnection.emitMapEditorDeleteEntity(this.commandId, this.entityId);
+    public toDto(sceneId: string): DeleteEntityCommandDto {
+        return {
+            type: "entity.delete",
+            commandId: this.commandId,
+            sceneId,
+            entityId: this.entityId,
+            entity: this.entityData,
+            dimensions: this.entityDimensions,
+        };
     }
 }

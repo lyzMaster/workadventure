@@ -19,7 +19,7 @@
     import { showFloatingUi } from "../../Utils/svelte-floatingui-show";
     import LazyEmote from "../EmoteMenu/LazyEmote.svelte";
     import HelpTooltip from "../Tooltip/HelpTooltip.svelte";
-    import { connectionManager } from "../../Connection/ConnectionManager";
+    import { connectionManager } from "../../Stores/StandaloneConnectionManager";
     import { popupStore } from "../../Stores/PopupStore";
     import SayPopUp from "../PopUp/SayPopUp.svelte";
     import { gameManager } from "../../Phaser/Game/GameManager";

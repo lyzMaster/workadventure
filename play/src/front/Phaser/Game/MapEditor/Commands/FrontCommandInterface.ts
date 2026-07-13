@@ -1,5 +1,4 @@
-import type { Command } from "@workadventure/map-editor";
-import type { RoomConnection } from "../../../../Connection/RoomConnection";
+import type { Command, LocalMapEditorCommand } from "@workadventure/map-editor";
 
 /**
  * Commands implementing this interface will be able to emit an event to the Pusher and generate an undo command
@@ -7,5 +6,5 @@ import type { RoomConnection } from "../../../../Connection/RoomConnection";
 export interface FrontCommandInterface {
     getUndoCommand(): Command & FrontCommandInterface;
 
-    emitEvent(roomConnection: RoomConnection): void;
+    toDto(sceneId: string): LocalMapEditorCommand;
 }

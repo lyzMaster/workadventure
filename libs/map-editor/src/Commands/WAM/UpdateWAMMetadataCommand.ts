@@ -1,11 +1,11 @@
-import type { ModifiyWAMMetadataMessage } from "@workadventure/messages";
 import type { WAMFileFormat } from "../../types";
+import type { UpdateWamMetadataCommandDto } from "../Dto/WamCommandDto";
 import { Command } from "../Command";
 
 export class UpdateWAMMetadataCommand extends Command {
     constructor(
         protected wam: WAMFileFormat,
-        protected modifiyWAMMetadataMessage: ModifiyWAMMetadataMessage,
+        protected modifiyWAMMetadataMessage: Omit<UpdateWamMetadataCommandDto, "type" | "commandId" | "sceneId">,
         id?: string,
     ) {
         super(id);

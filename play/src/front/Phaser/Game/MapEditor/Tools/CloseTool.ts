@@ -1,4 +1,4 @@
-import type { EditMapCommandMessage } from "@workadventure/messages";
+import type { LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
 import { mapEditorModeStore, mapEditorVisibilityStore } from "../../../../Stores/MapEditorStore";
 import { gameManager } from "../../GameManager";
@@ -27,7 +27,7 @@ export class CloseTool implements MapEditorTool {
     public handleKeyDownEvent(event: KeyboardEvent): void {
         // Nothing to be done
     }
-    public handleIncomingCommandMessage(editMapCommandMessage: EditMapCommandMessage): Promise<void> {
+    public handleIncomingCommandMessage(editMapCommandMessage: LocalMapEditorCommand): Promise<void> {
         // Nothing to be done
         return Promise.resolve();
     }

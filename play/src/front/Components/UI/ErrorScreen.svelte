@@ -3,7 +3,7 @@
     import { onDestroy } from "svelte";
     import { errorScreenStore } from "../../Stores/ErrorScreenStore";
     import { gameManager } from "../../Phaser/Game/GameManager";
-    import { connectionManager } from "../../Connection/ConnectionManager";
+    import { connectionManager } from "../../Stores/StandaloneConnectionManager";
 
     import LL from "../../../i18n/i18n-svelte";
     import { userIsConnected } from "../../Stores/MenuStore";

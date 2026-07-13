@@ -1,18 +1,17 @@
-import type { WAMFileFormat } from "@workadventure/map-editor";
-import { Command } from "@workadventure/map-editor";
-import type { ModifiyWAMMetadataMessage } from "@workadventure/messages";
+import type { UpdateWamMetadataCommandDto, WAMFileFormat } from "@workadventure/map-editor";
+import { UpdateWAMMetadataCommand } from "@workadventure/map-editor";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 
 /**
  * Represents a front command for updating WAM metadata.
  */
-export class UpdateWAMMetadataFrontCommand extends Command implements FrontCommandInterface {
+export class UpdateWAMMetadataFrontCommand extends UpdateWAMMetadataCommand implements FrontCommandInterface {
     constructor(
-        private readonly modifiyWAMMetadataMessage: ModifiyWAMMetadataMessage,
+        wam: WAMFileFormat,
+        private readonly modifiyWAMMetadataMessage: Omit<UpdateWamMetadataCommandDto, "type" | "commandId" | "sceneId">,
         commandId?: string,
     ) {
-        super(commandId);
+        super(wam, modifiyWAMMetadataMessage, commandId);
     }
 
     /**
@@ -20,15 +19,16 @@ export class UpdateWAMMetadataFrontCommand extends Command implements FrontComma
      * @returns The undo command.
      */
     public getUndoCommand(): UpdateWAMMetadataFrontCommand {
-        return new UpdateWAMMetadataFrontCommand(this.modifiyWAMMetadataMessage, this.commandId);
+        return new UpdateWAMMetadataFrontCommand(this.wam, this.modifiyWAMMetadataMessage, this.commandId);
     }
 
-    /**
-     * Emits an event to modify WAM metadata.
-     * @param roomConnection - The room connection.
-     */
-    public emitEvent(roomConnection: RoomConnection): void {
-        roomConnection.emitModifiyWAMMetadataMessage(this.commandId, this.modifiyWAMMetadataMessage);
+    public toDto(sceneId: string): UpdateWamMetadataCommandDto {
+        return {
+            ...this.modifiyWAMMetadataMessage,
+            type: "wam.metadata.update",
+            commandId: this.commandId,
+            sceneId,
+        };
     }
 
     /**
@@ -36,7 +36,6 @@ export class UpdateWAMMetadataFrontCommand extends Command implements FrontComma
      * @returns A promise that resolves when the command is executed.
      */
     public execute(): Promise<void | undefined | WAMFileFormat> {
-        console.warn("UpdateWAMMetadataFrontCommand.execute() is not implemented");
-        return Promise.resolve(undefined);
+        return super.execute();
     }
 }

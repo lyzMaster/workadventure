@@ -1,4 +1,4 @@
-import { AvailabilityStatus } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
 import { statusChanger } from "../../Components/ActionBar/AvailabilityStatus/statusChanger";
 import { resetAllStatusStoreExcept } from "./statusChangerFunctions";
 

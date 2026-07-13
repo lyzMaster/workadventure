@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { AvailabilityStatus, SayMessageType } from "@workadventure/messages";
+    import { AvailabilityStatus, SayMessageType } from "@workadventure/game-model";
     import { onDestroy, onMount } from "svelte";
     import { gameManager } from "../../Phaser/Game/GameManager";
     import { inputFormFocusStore } from "../../Stores/UserInputStore";

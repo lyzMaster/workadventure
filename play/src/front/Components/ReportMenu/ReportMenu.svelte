@@ -2,7 +2,7 @@
     import { onDestroy, onMount } from "svelte";
     import type { Unsubscriber } from "svelte/store";
     import { get } from "svelte/store";
-    import { connectionManager } from "../../Connection/ConnectionManager";
+    import { connectionManager } from "../../Stores/StandaloneConnectionManager";
     import { showReportScreenStore, userReportEmpty } from "../../Stores/ShowReportScreenStore";
     import { LL } from "../../../i18n/i18n-svelte";
     import ButtonClose from "../Input/ButtonClose.svelte";

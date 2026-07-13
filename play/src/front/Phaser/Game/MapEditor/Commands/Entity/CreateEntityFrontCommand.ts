@@ -1,8 +1,7 @@
-import type { EntityDimensions, WamFile, WAMEntityData } from "@workadventure/map-editor";
+import type { CreateEntityCommandDto, EntityDimensions, WamFile, WAMEntityData } from "@workadventure/map-editor";
 import { CreateEntityCommand } from "@workadventure/map-editor";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 import { DeleteEntityFrontCommand } from "./DeleteEntityFrontCommand";
 
 export class CreateEntityFrontCommand extends CreateEntityCommand implements FrontCommandInterface {
@@ -28,7 +27,14 @@ export class CreateEntityFrontCommand extends CreateEntityCommand implements Fro
         return new DeleteEntityFrontCommand(this.wamFile, this.entityId, undefined, this.entitiesManager);
     }
 
-    public emitEvent(roomConnection: RoomConnection): void {
-        roomConnection.emitMapEditorCreateEntity(this.commandId, this.entityId, this.entityData, this.entityDimensions);
+    public toDto(sceneId: string): CreateEntityCommandDto {
+        return {
+            type: "entity.create",
+            commandId: this.commandId,
+            sceneId,
+            entityId: this.entityId,
+            entity: this.entityData,
+            dimensions: this.entityDimensions,
+        };
     }
 }

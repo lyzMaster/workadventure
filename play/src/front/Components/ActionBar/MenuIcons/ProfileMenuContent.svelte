@@ -1,18 +1,13 @@
 <script lang="ts">
     import * as Sentry from "@sentry/svelte";
-    import { AvailabilityStatus } from "@workadventure/messages";
+    import { AvailabilityStatus } from "@workadventure/game-model";
     import { setContext } from "svelte";
     import type { Readable } from "svelte/store";
     import { derived, get } from "svelte/store";
     import { analyticsClient } from "../../../Administration/AnalyticsClient";
-    import { connectionManager } from "../../../Connection/ConnectionManager";
+    import { connectionManager } from "../../../Stores/StandaloneConnectionManager";
     import { ENABLE_OPENID, SENTRY_DSN_FRONT } from "../../../Enum/EnvironmentVariable";
     import { gameManager } from "../../../Phaser/Game/GameManager";
-    import { EnableCameraScene, EnableCameraSceneName } from "../../../Phaser/Login/EnableCameraScene";
-    import { LoginScene, LoginSceneName } from "../../../Phaser/Login/LoginScene";
-    import { PwaInstallScene, PwaInstallSceneName } from "../../../Phaser/Login/PwaInstallScene";
-    import { SelectCharacterScene, SelectCharacterSceneName } from "../../../Phaser/Login/SelectCharacterScene";
-    import { SelectCompanionScene, SelectCompanionSceneName } from "../../../Phaser/Login/SelectCompanionScene";
     import type { RequestedStatus } from "../../../Rules/StatusRules/statusRules";
     import { loginSceneVisibleStore } from "../../../Stores/LoginSceneStore";
     import { enableCameraSceneVisibilityStore } from "../../../Stores/MediaStore";
@@ -60,6 +55,11 @@
         AvailabilityStatus.BACK_IN_A_MOMENT,
         AvailabilityStatus.DO_NOT_DISTURB,
     ];
+    const EnableCameraSceneName = "EnableCameraScene";
+    const LoginSceneName = "LoginScene";
+    const PwaInstallSceneName = "PwaInstallScene";
+    const SelectCharacterSceneName = "SelectCharacterScene";
+    const SelectCompanionSceneName = "SelectCompanionScene";
 
     function showWokaNameMenuItem() {
         return connectionManager.currentRoom?.opidWokaNamePolicy !== "force_opid";
@@ -67,22 +67,22 @@
 
     function openEditNameScene() {
         loginSceneVisibleStore.set(true);
-        gameManager.leaveGame(LoginSceneName, new LoginScene());
+        gameManager.tryToStopScene(LoginSceneName);
     }
 
     function openEditSkinScene() {
         selectCharacterSceneVisibleStore.set(true);
-        gameManager.leaveGame(SelectCharacterSceneName, new SelectCharacterScene());
+        gameManager.tryToStopScene(SelectCharacterSceneName);
     }
 
     function openEditCompanionScene() {
         selectCompanionSceneVisibleStore.set(true);
-        gameManager.leaveGame(SelectCompanionSceneName, new SelectCompanionScene());
+        gameManager.tryToStopScene(SelectCompanionSceneName);
     }
 
     function openEnableCameraScene() {
         enableCameraSceneVisibilityStore.showEnableCameraScene();
-        gameManager.leaveGame(EnableCameraSceneName, new EnableCameraScene());
+        gameManager.tryToStopScene(EnableCameraSceneName);
         analyticsClient.editCamera();
     }
 
@@ -144,7 +144,7 @@
     function openPwaInstallPrompt(): void {
         analyticsClient.pwaInstallFromProfileMenuClick();
         openedMenuStore.close("profileMenu");
-        gameManager.leaveGame(PwaInstallSceneName, new PwaInstallScene());
+        gameManager.tryToStopScene(PwaInstallSceneName);
     }
 </script>
 

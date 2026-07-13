@@ -8,10 +8,6 @@ check_translations() {
 }
 
 (
-cd messages || exit
-npm run precommit
-)
-(
 cd play || exit
 npm run precommit
 )

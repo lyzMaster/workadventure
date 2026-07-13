@@ -2,8 +2,13 @@ import * as Phaser from "phaser";
 import type { Unsubscriber, Readable } from "svelte/store";
 import { get, readable } from "svelte/store";
 import type { CancelablePromise } from "cancelable-promise";
-import type { AvailabilityStatus as AvailabilityStatusType } from "@workadventure/messages";
-import { SayMessageType, AvailabilityStatus, PositionMessage_Direction } from "@workadventure/messages";
+import {
+    CharacterAvailabilityStatus as AvailabilityStatus,
+    CharacterSayType,
+    Direction,
+    type CharacterAvailabilityStatus,
+    type Direction as DirectionType,
+} from "@workadventure/game-model";
 import { defaultWoka, Deferred, type Movable, type PositionInterface } from "@workadventure/shared-utils";
 import { Subject } from "rxjs";
 import { currentPlayerWokaStore } from "../../Stores/CurrentPlayerWokaStore";
@@ -50,10 +55,10 @@ export abstract class Character extends Container implements OutlineableInterfac
 
     private bubble: RenderTexture | null | DOMElement = null;
     private usernameDisplay: UsernameDisplay | undefined;
-    private availabilityStatus: AvailabilityStatusType = AvailabilityStatus.ONLINE;
+    private availabilityStatus: CharacterAvailabilityStatus = AvailabilityStatus.ONLINE;
     public readonly playerName: string;
     public sprites: Map<string, Sprite>;
-    protected _lastDirection: PositionMessage_Direction = PositionMessage_Direction.DOWN;
+    protected _lastDirection: DirectionType = Direction.DOWN;
     //private teleportation: Sprite;
     private invisible: boolean;
     private clickable: boolean;
@@ -89,7 +94,7 @@ export abstract class Character extends Container implements OutlineableInterfac
         y: number,
         texturesPromise: CancelablePromise<string[]>,
         name: string,
-        direction: PositionMessage_Direction,
+        direction: DirectionType,
         moving: boolean,
         frame: string | number,
         isClickable: boolean,
@@ -285,19 +290,19 @@ export abstract class Character extends Container implements OutlineableInterfac
      */
     public getDirectionalActivationPosition(shift: number): { x: number; y: number } {
         switch (this._lastDirection) {
-            case PositionMessage_Direction.DOWN: {
+            case Direction.DOWN: {
                 return { x: this.x, y: this.y + shift };
             }
-            case PositionMessage_Direction.LEFT: {
+            case Direction.LEFT: {
                 return { x: this.x - shift, y: this.y };
             }
-            case PositionMessage_Direction.RIGHT: {
+            case Direction.RIGHT: {
                 return { x: this.x + shift, y: this.y };
             }
-            case PositionMessage_Direction.UP: {
+            case Direction.UP: {
                 return { x: this.x, y: this.y - shift };
             }
-            case PositionMessage_Direction.UNRECOGNIZED: {
+            default: {
                 return { x: this.x, y: this.y };
             }
         }
@@ -323,7 +328,7 @@ export abstract class Character extends Container implements OutlineableInterfac
         this.usernameDisplay?.setTalking(show, this.getAvailabilityStatus() === AvailabilityStatus.SPEAKER);
     }
 
-    public setAvailabilityStatus(availabilityStatus: AvailabilityStatusType, instant = false): void {
+    public setAvailabilityStatus(availabilityStatus: CharacterAvailabilityStatus, instant = false): void {
         if (availabilityStatus !== AvailabilityStatus.UNCHANGED) {
             this.availabilityStatus = availabilityStatus;
         }
@@ -367,7 +372,7 @@ export abstract class Character extends Container implements OutlineableInterfac
         }
     }
 
-    protected playAnimation(direction: PositionMessage_Direction, moving: boolean): void {
+    protected playAnimation(direction: DirectionType, moving: boolean): void {
         if (this.invisible) return;
         for (const [texture, sprite] of this.sprites.entries()) {
             if (!sprite.anims) {
@@ -503,15 +508,15 @@ export abstract class Character extends Container implements OutlineableInterfac
         // Biasing y prevents the animation from flickering between horizontal and vertical directions.
         if (Math.abs(x - oldX) > Math.abs((y - oldY) * 1.5)) {
             if (x < oldX) {
-                this._lastDirection = PositionMessage_Direction.LEFT;
+                this._lastDirection = Direction.LEFT;
             } else if (x > oldX) {
-                this._lastDirection = PositionMessage_Direction.RIGHT;
+                this._lastDirection = Direction.RIGHT;
             }
         } else {
             if (y < oldY) {
-                this._lastDirection = PositionMessage_Direction.UP;
+                this._lastDirection = Direction.UP;
             } else if (y > oldY) {
-                this._lastDirection = PositionMessage_Direction.DOWN;
+                this._lastDirection = Direction.DOWN;
             }
         }
 
@@ -519,7 +524,7 @@ export abstract class Character extends Container implements OutlineableInterfac
         this.companion?.setTarget(this.x, this.y, this._lastDirection);
     }
 
-    say(text: string, type: SayMessageType) {
+    say(text: string, type: CharacterSayType) {
         this.scene.markDirty();
         if (this.bubble !== null) {
             this.remove(this.bubble);
@@ -531,8 +536,7 @@ export abstract class Character extends Container implements OutlineableInterfac
         }
 
         switch (type) {
-            case SayMessageType.SpeechBubble:
-            case SayMessageType.UNRECOGNIZED: {
+            case CharacterSayType.SpeechBubble: {
                 const speechBubble = new SpeechBubble(text);
                 this.bubble = new DOMElement(
                     this.scene,
@@ -543,7 +547,7 @@ export abstract class Character extends Container implements OutlineableInterfac
                 this.add(this.bubble);
                 break;
             }
-            case SayMessageType.ThinkingCloud: {
+            case CharacterSayType.ThinkingCloud: {
                 const thinkElement = new ThinkingCloud({
                     text: text,
                     maxWidth: 200,
@@ -768,7 +772,7 @@ export abstract class Character extends Container implements OutlineableInterfac
         return this.textureLoadedDeferred.promise;
     }
 
-    public get lastDirection(): PositionMessage_Direction {
+    public get lastDirection(): DirectionType {
         return this._lastDirection;
     }
 

@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { AvailabilityStatus } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
 import type { GameScene } from "../Game/GameScene";
 import { waScaleManager, WaScaleManagerEvent } from "../Services/WaScaleManager";
 import { UsernameMegaphoneDisplay } from "./UsernameMegaphoneDisplay";

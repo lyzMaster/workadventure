@@ -1,6 +1,5 @@
 import debug from "debug";
 import { slugify } from "@workadventure/shared-utils/src/Jitsi/slugify";
-import { FilterType } from "@workadventure/messages";
 import { get, type Unsubscriber } from "svelte/store";
 import type { Subscription } from "rxjs";
 import { type WAMSettings, WAMSettingsUtils } from "@workadventure/map-editor";
@@ -21,6 +20,10 @@ import { getMegaphoneSpaceFields } from "./MegaphoneSpaceFields";
 
 const broadcastServiceLogger = debug("BroadcastService");
 const DEFAULT_MEGAPHONE_NOTIFICATION_SOUND_URL = "/resources/objects/megaphone/megaphone1.mp3";
+const FilterType = {
+    LIVE_STREAMING_USERS: "liveStreamingUsers",
+    LIVE_STREAMING_USERS_WITH_FEEDBACK: "liveStreamingUsersWithFeedback",
+} as const;
 
 export class BroadcastService {
     private broadcastSpaces: SpaceInterface[] = [];

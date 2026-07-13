@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { EntityDataProperties, EntityDataPropertiesKeys, EntityDataProperty } from "@workadventure/map-editor";
     import { onDestroy } from "svelte";
-    import type { ApplicationDefinitionInterface } from "@workadventure/messages";
     import { v4 as uuid } from "uuid";
     import {
         mapEditorEntityModeStore,
@@ -23,6 +22,7 @@
     import { gameManager } from "../../../Phaser/Game/GameManager";
 
     const applicationManager = gameManager.getCurrentGameScene().applicationManager;
+    type ApplicationDefinitionInterface = Record<string, unknown>;
 
     let properties: EntityDataProperties = $state([]);
     let entityName = $state("");

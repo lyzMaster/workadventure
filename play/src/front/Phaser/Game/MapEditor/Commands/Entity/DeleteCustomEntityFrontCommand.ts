@@ -1,14 +1,12 @@
-import type { Command, WamFile } from "@workadventure/map-editor";
+import type { Command, DeleteCustomEntityCommandDto, WamFile } from "@workadventure/map-editor";
 import { DeleteCustomEntityCommand } from "@workadventure/map-editor";
-import type { DeleteCustomEntityMessage } from "@workadventure/messages";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 import type { FrontCommand } from "../FrontCommand";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 import type { EntitiesCollectionsManager } from "../../EntitiesCollectionsManager";
 
 export class DeleteCustomEntityFrontCommand extends DeleteCustomEntityCommand implements FrontCommand {
     constructor(
-        deleteCustomEntityMessage: DeleteCustomEntityMessage,
+        deleteCustomEntityMessage: Omit<DeleteCustomEntityCommandDto, "type" | "commandId" | "sceneId">,
         wamFile: WamFile | undefined,
         private entitiesManager: EntitiesManager,
         private entitiesCollectionManager: EntitiesCollectionsManager,
@@ -16,8 +14,13 @@ export class DeleteCustomEntityFrontCommand extends DeleteCustomEntityCommand im
         super(deleteCustomEntityMessage, wamFile);
     }
 
-    emitEvent(roomConnection: RoomConnection): void {
-        roomConnection.emitMapEditorDeleteCustomEntity(this.commandId, this.deleteCustomEntityMessage);
+    toDto(sceneId: string): DeleteCustomEntityCommandDto {
+        return {
+            ...this.deleteCustomEntityMessage,
+            type: "entity.custom.delete",
+            commandId: this.commandId,
+            sceneId,
+        };
     }
 
     execute(): Promise<void> {

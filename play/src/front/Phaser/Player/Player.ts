@@ -1,7 +1,7 @@
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
 import type { CancelablePromise } from "cancelable-promise";
-import { AskPositionMessage_AskType, PositionMessage_Direction } from "@workadventure/messages";
+import { Direction, rotateDirectionClockwise, type Direction as DirectionType } from "@workadventure/game-model";
 import type { GameScene } from "../Game/GameScene";
 import type { ActiveEventList } from "../UserInput/UserInputManager";
 import { UserInputEvent } from "../UserInput/UserInputManager";
@@ -28,7 +28,7 @@ export class Player extends Character {
         y: number,
         name: string,
         texturesPromise: CancelablePromise<string[]>,
-        direction: PositionMessage_Direction,
+        direction: DirectionType,
         moving: boolean,
         companionTexturePromise: CancelablePromise<string> | undefined,
     ) {
@@ -65,10 +65,10 @@ export class Player extends Character {
     }
 
     public rotate(): void {
-        const direction = (this._lastDirection + 1) % (PositionMessage_Direction.LEFT + 1);
+        const direction = rotateDirectionClockwise(this._lastDirection);
         this.emit(hasMovedEventName, {
             moving: false,
-            direction: (this._lastDirection + 1) % (PositionMessage_Direction.LEFT + 1),
+            direction,
             x: this.x,
             y: this.y,
         });
@@ -143,9 +143,9 @@ export class Player extends Character {
         let direction = this._lastDirection;
         if (moving && !joystickMovement) {
             if (Math.abs(x) > Math.abs(y)) {
-                direction = x < 0 ? PositionMessage_Direction.LEFT : PositionMessage_Direction.RIGHT;
+                direction = x < 0 ? Direction.LEFT : Direction.RIGHT;
             } else {
-                direction = y < 0 ? PositionMessage_Direction.UP : PositionMessage_Direction.DOWN;
+                direction = y < 0 ? Direction.UP : Direction.DOWN;
             }
         }
 
@@ -203,15 +203,15 @@ export class Player extends Character {
 
         if (Math.abs(body.velocity.x) > Math.abs(body.velocity.y)) {
             if (body.velocity.x < 0) {
-                this._lastDirection = PositionMessage_Direction.LEFT;
+                this._lastDirection = Direction.LEFT;
             } else if (body.velocity.x > 0) {
-                this._lastDirection = PositionMessage_Direction.RIGHT;
+                this._lastDirection = Direction.RIGHT;
             }
         } else {
             if (body.velocity.y < 0) {
-                this._lastDirection = PositionMessage_Direction.UP;
+                this._lastDirection = Direction.UP;
             } else if (body.velocity.y > 0) {
-                this._lastDirection = PositionMessage_Direction.DOWN;
+                this._lastDirection = Direction.DOWN;
             }
         }
         passStatusToOnline();
@@ -260,7 +260,7 @@ export class Player extends Character {
         this.scene.connection?.emitAskPosition(
             localUserStore.getLocalUser()?.uuid ?? "",
             this.scene.roomUrl,
-            AskPositionMessage_AskType.LOCATE,
+            "locate",
         );
     }
 

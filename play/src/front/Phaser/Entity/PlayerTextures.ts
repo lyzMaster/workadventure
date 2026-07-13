@@ -1,6 +1,23 @@
 //The list of all the player textures, both the default models and the partial textures used for customization
 
-import type { WokaList, WokaPartType } from "@workadventure/messages";
+export interface WokaTextureCollection {
+    name: string;
+    textures: WokaTextureDescriptionInterface[];
+}
+
+export interface WokaPartType {
+    collections: WokaTextureCollection[];
+}
+
+export interface WokaList {
+    woka: WokaPartType;
+    body: WokaPartType;
+    eyes: WokaPartType;
+    hair: WokaPartType;
+    clothes: WokaPartType;
+    hat: WokaPartType;
+    accessory: WokaPartType;
+}
 
 export interface WokaTextureDescriptionListInterface {
     [key: string]: WokaTextureDescriptionInterface;

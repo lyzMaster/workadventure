@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import type { CharacterTextureMessage } from "@workadventure/messages";
+import type { CharacterTexture } from "@workadventure/game-model";
 import type { GameScene } from "../Game/GameScene";
 import { TexturesHelper } from "../Helpers/TexturesHelper";
 import { CharacterTextureError } from "../../Exception/CharacterTextureError";
@@ -12,7 +12,7 @@ import Sprite = Phaser.GameObjects.Sprite;
  * Class that let you generate a base64 image from a CharacterLayer[]
  */
 export class CharacterLayerManager {
-    static wokaBase64(characterTextures: CharacterTextureMessage[]): Promise<string> {
+    static wokaBase64(characterTextures: CharacterTexture[]): Promise<string> {
         const scene = gameManager.getCurrentGameScene();
         return lazyLoadPlayerCharacterTextures(
             scene.superLoad,

@@ -3,11 +3,9 @@ import type { AreaData, Command } from "@workadventure/map-editor";
 import { UpdateWAMSettingCommand } from "@workadventure/map-editor";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
-import type { EditMapCommandMessage } from "@workadventure/messages";
-import pLimit from "p-limit";
+import type { LocalMapEditorCommand } from "@workadventure/map-editor";
 import debug from "debug";
 import { deepmergeInto } from "deepmerge-ts";
-import type { RoomConnection } from "../../../Connection/RoomConnection";
 import type { GameScene } from "../GameScene";
 import {
     mapEditorAskToClaimPersonalAreaStore,
@@ -30,8 +28,19 @@ import { TrashEditorTool } from "./Tools/TrashEditorTool";
 import { ExplorerTool } from "./Tools/ExplorerTool";
 import { CloseTool } from "./Tools/CloseTool";
 import { UpdateAreaFrontCommand } from "./Commands/Area/UpdateAreaFrontCommand";
-import type { MapEditTransport } from "./MapEditTransport";
-import { OnlineMapEditTransport } from "./OnlineMapEditTransport";
+import type { MapEditResult, MapEditTransport } from "./MapEditTransport";
+
+const unsupportedMapEditTransport: MapEditTransport = {
+    acknowledgement: "local",
+    submit(command: FrontCommand): Promise<MapEditResult> {
+        return Promise.resolve({
+            ok: false,
+            commandId: command.commandId,
+            code: "unsupported_command",
+            message: "No map edit transport is attached to the current scene",
+        });
+    },
+};
 
 export enum EditorToolName {
     AreaEditor = "AreaEditor",
@@ -89,7 +98,7 @@ export class MapEditorModeManager {
         scene: GameScene,
         private _isInsidePersonalAreaStore = isInsidePersonalAreaStore,
         private _personalAreaDataStore = personalAreaDataStore,
-        private readonly mapEditTransport: MapEditTransport = new OnlineMapEditTransport(() => scene.connection),
+        private readonly mapEditTransport: MapEditTransport = unsupportedMapEditTransport,
     ) {
         this.scene = scene;
 
@@ -240,7 +249,7 @@ export class MapEditorModeManager {
      * Update local map with missing commands given from the map-storage on RoomJoinedEvent. This commands
      * are applied locally and are not being send further.
      */
-    public async updateMapToNewest(commands: EditMapCommandMessage[]): Promise<void> {
+    public async updateMapToNewest(commands: LocalMapEditorCommand[]): Promise<void> {
         if (commands.length !== 0) {
             logger(`Map is not up to date. Updating by applying ${commands.length} missing commands.`);
             for (const command of commands) {
@@ -341,59 +350,8 @@ export class MapEditorModeManager {
         return true;
     }
 
-    public subscribeToRoomConnection(connection: RoomConnection): void {
-        const limit = pLimit(1);
-        // The editMapCommandMessageStream stream is completed in the RoomConnection. No need to unsubscribe.
-        //eslint-disable-next-line rxjs/no-ignored-subscription, svelte/no-ignored-unsubscribe
-        connection.editMapCommandMessageStream.subscribe((editMapCommandMessage) => {
-            limit(async () => {
-                if (editMapCommandMessage.editMapMessage?.message?.$case === "errorCommandMessage") {
-                    logger(
-                        "ErrorCommandMessage received",
-                        editMapCommandMessage.editMapMessage?.message.errorCommandMessage,
-                    );
-                    const command = this.pendingCommands.find(
-                        (command) => command.commandId === editMapCommandMessage.id,
-                    );
-                    if (command) {
-                        logger("removing command of pendingList : ", editMapCommandMessage.id);
-                        this.pendingCommands.splice(this.pendingCommands.indexOf(command), 1);
-                    }
-                    return;
-                }
-
-                logger("Received command from server", editMapCommandMessage.id);
-
-                // Local command execution (undo/redo)
-                if (this.pendingCommands.length > 0) {
-                    if (this.pendingCommands[0].commandId === editMapCommandMessage.id) {
-                        logger("removing command of pendingList : ", editMapCommandMessage.id);
-                        const command = this.pendingCommands.shift();
-
-                        const message = editMapCommandMessage.editMapMessage?.message;
-
-                        if (
-                            command instanceof UpdateAreaFrontCommand &&
-                            message &&
-                            message.$case === "modifyAreaMessage" &&
-                            message.modifyAreaMessage.modifyServerData === true
-                        ) {
-                            command.setNewConfig(message.modifyAreaMessage);
-                            await command.execute();
-                        }
-
-                        return;
-                    }
-                    await this.revertPendingCommands();
-                }
-
-                // Remote command execution
-                for (const tool of Object.values(this.editorTools)) {
-                    //eslint-disable-next-line no-await-in-loop
-                    await tool.handleIncomingCommandMessage(editMapCommandMessage);
-                }
-            }).catch((e) => console.error(e));
-        });
+    public subscribeToRoomConnection(_connection: unknown): void {
+        // Standalone map edits are acknowledged by LocalMapEditTransport.
     }
 
     private async revertPendingCommands(): Promise<void> {

@@ -1,4 +1,3 @@
-import type { RecordingButtonState } from "@workadventure/messages";
 import type { Readable } from "svelte/store";
 import { derived } from "svelte/store";
 
@@ -7,6 +6,13 @@ import type { SpaceRegistryInterface } from "../../../Space/SpaceRegistry/SpaceR
 import { recordingSchema } from "../../../Space/SpaceMetadataValidator";
 import type { RecordingState } from "../../../Stores/RecordingStore";
 import { recordingStore } from "../../../Stores/RecordingStore";
+
+type RecordingButtonState = {
+    disabled?: boolean;
+    enabled?: boolean;
+    started?: boolean;
+    stopped?: boolean;
+};
 
 export type SpaceRegistryForRecordingMenu = Pick<SpaceRegistryInterface, "getAll" | "spacesEligibleForRecording">;
 

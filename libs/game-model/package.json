@@ -1,0 +1,16 @@
+{
+  "name": "@workadventure/game-model",
+  "version": "1.0.0",
+  "description": "Standalone domain model types",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "files": [
+    "src"
+  ]
+}

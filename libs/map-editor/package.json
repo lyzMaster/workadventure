@@ -23,7 +23,6 @@
   "dependencies": {
     "@types/uuid": "^10.0.0",
     "@workadventure/math-utils": "1.0.0",
-    "@workadventure/messages": "1.0.0",
     "@workadventure/shared-utils": "^1.0.0",
     "@workadventure/tiled-map-type-guard": "^2.1.2",
     "axios": "^1.16.1",

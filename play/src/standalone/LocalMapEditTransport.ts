@@ -27,6 +27,7 @@ export class LocalMapEditTransport implements MapEditTransport {
             };
         }
         try {
+            command.toDto(this.definition.sceneId);
             const overlay = createSceneOverlay(this.definition, this.baseEntityIds, wamFile.getWam());
             if (overlay.sceneId !== this.definition.sceneId) {
                 throw new Error(

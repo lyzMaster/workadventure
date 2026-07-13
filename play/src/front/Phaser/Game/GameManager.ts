@@ -14,14 +14,8 @@ import {
     requestedMicrophoneState,
 } from "../../Stores/MediaStore";
 import { menuIconVisiblilityStore } from "../../Stores/MenuStore";
-import { EnableCameraSceneName } from "../Login/EnableCameraScene";
-import { LoginSceneName } from "../Login/LoginScene";
-import { PwaInstallSceneName } from "../Login/PwaInstallScene";
-import { SelectCharacterSceneName } from "../Login/SelectCharacterScene";
-import { EmptySceneName } from "../Login/EmptyScene";
 import { gameSceneIsLoadedStore } from "../../Stores/GameSceneStore";
 import { myCameraStore } from "../../Stores/MyMediaStore";
-import { SelectCompanionSceneName } from "../Login/SelectCompanionScene";
 import { errorScreenStore } from "../../Stores/ErrorScreenStore";
 import { pwaInstallProfileMenuEligibleStore, pwaInstallSceneVisibleStore } from "../../Stores/PwaInstallStore";
 import { hasCapability } from "../../Connection/Capabilities";
@@ -35,6 +29,13 @@ import { raceTimeout } from "../../Utils/PromiseUtils";
 import { GameScene } from "./GameScene";
 
 import ScenePlugin = Phaser.Scenes.ScenePlugin;
+
+const EnableCameraSceneName = "EnableCameraScene";
+const LoginSceneName = "LoginScene";
+const PwaInstallSceneName = "PwaInstallScene";
+const SelectCharacterSceneName = "SelectCharacterScene";
+const SelectCompanionSceneName = "SelectCompanionScene";
+const EmptySceneName = "EmptyScene";
 
 /**
  * This class should be responsible for any scene starting/stopping

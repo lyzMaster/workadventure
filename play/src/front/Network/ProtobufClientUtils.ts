@@ -1,4 +1,4 @@
-import { PositionMessage_Direction } from "@workadventure/messages";
+import type { Direction } from "@workadventure/game-model";
 
 export interface MucRoomDefinition {
     name: string;
@@ -7,18 +7,7 @@ export interface MucRoomDefinition {
 }
 
 export class ProtobufClientUtils {
-    public static toDirectionString(direction: PositionMessage_Direction): "up" | "down" | "left" | "right" {
-        switch (direction) {
-            case PositionMessage_Direction.UP:
-                return "up";
-            case PositionMessage_Direction.DOWN:
-                return "down";
-            case PositionMessage_Direction.LEFT:
-                return "left";
-            case PositionMessage_Direction.RIGHT:
-                return "right";
-            default:
-                throw new Error("Unexpected direction");
-        }
+    public static toDirectionString(direction: Direction): "up" | "down" | "left" | "right" {
+        return direction;
     }
 }

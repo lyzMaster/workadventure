@@ -1,4 +1,4 @@
-import type { EditMapCommandMessage } from "@workadventure/messages";
+import type { LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
 
 export abstract class MapEditorTool {
@@ -11,5 +11,5 @@ export abstract class MapEditorTool {
     /**
      * React on commands coming from the outside
      */
-    public abstract handleIncomingCommandMessage(editMapCommandMessage: EditMapCommandMessage): Promise<void>;
+    public abstract handleIncomingCommandMessage(editMapCommandMessage: LocalMapEditorCommand): Promise<void>;
 }

@@ -2,7 +2,7 @@ import type { Readable, Writable } from "svelte/store";
 import { derived, get, writable } from "svelte/store";
 import type { WorkAdventureComponent, WorkAdventureComponentProps } from "../../types/component";
 import type { Translation } from "../../i18n/i18n-types";
-import { connectionManager } from "../Connection/ConnectionManager";
+import { connectionManager } from "./StandaloneConnectionManager";
 import { localUserStore } from "../Connection/LocalUserStore";
 import { ABSOLUTE_PUSHER_URL } from "../Enum/ComputedConst";
 import {

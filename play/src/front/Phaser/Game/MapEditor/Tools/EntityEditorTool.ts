@@ -1,7 +1,6 @@
 import * as Phaser from "phaser";
-import type { AreaData, EntityData, WAMEntityData } from "@workadventure/map-editor";
+import type { AreaData, EntityData, LocalMapEditorCommand, WAMEntityData } from "@workadventure/map-editor";
 import * as Sentry from "@sentry/svelte";
-import type { EditMapCommandMessage } from "@workadventure/messages";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
@@ -85,18 +84,21 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
     /**
      * React on commands coming from the outside
      */
-    public async handleIncomingCommandMessage(editMapCommandMessage: EditMapCommandMessage): Promise<void> {
-        const commandId = editMapCommandMessage.id;
-        switch (editMapCommandMessage.editMapMessage?.message?.$case) {
-            case "createEntityMessage": {
-                const createEntityMessage = editMapCommandMessage.editMapMessage?.message.createEntityMessage;
+    public async handleIncomingCommandMessage(editMapCommandMessage: LocalMapEditorCommand): Promise<void> {
+        const commandId = editMapCommandMessage.commandId;
+        switch (editMapCommandMessage.type) {
+            case "entity.create": {
+                const createEntityMessage = editMapCommandMessage.entity;
                 const entityPrefab = await this.scene
                     .getEntitiesCollectionsManager()
-                    .getEntityPrefab(createEntityMessage.collectionName, createEntityMessage.prefabId);
+                    .getEntityPrefab(
+                        createEntityMessage.prefabRef.collectionName,
+                        createEntityMessage.prefabRef.id,
+                    );
 
                 if (!entityPrefab) {
                     console.warn(
-                        `NO PREFAB WAS FOUND FOR: ${createEntityMessage.collectionName} ${createEntityMessage.prefabId}`,
+                        `NO PREFAB WAS FOUND FOR: ${createEntityMessage.prefabRef.collectionName} ${createEntityMessage.prefabRef.id}`,
                     );
                     return;
                 }
@@ -105,7 +107,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                     .then(() => {
                         this.entitiesManager
                             .getEntities()
-                            .get(createEntityMessage.id)
+                            .get(editMapCommandMessage.entityId)
                             ?.setTexture(entityPrefab.imagePath);
                     })
                     .catch((reason) => {
@@ -113,52 +115,38 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                     });
 
                 const entityData: WAMEntityData = {
-                    x: createEntityMessage.x,
-                    y: createEntityMessage.y,
-                    prefabRef: {
-                        id: entityPrefab.id,
-                        collectionName: entityPrefab.collectionName,
-                    },
-                    properties: createEntityMessage.properties,
-                    name: createEntityMessage.name,
+                    ...createEntityMessage,
                 };
                 // execute command locally
                 await this.mapEditorModeManager.executeLocalCommand(
                     new CreateEntityFrontCommand(
                         this.scene.getGameMap().getWamFile()!,
-                        createEntityMessage.id,
+                        editMapCommandMessage.entityId,
                         entityData,
                         commandId,
                         this.entitiesManager,
-                        { width: createEntityMessage.width, height: createEntityMessage.height },
+                        editMapCommandMessage.dimensions ?? { width: 0, height: 0 },
                     ),
                 );
                 break;
             }
-            case "deleteEntityMessage": {
-                const id = editMapCommandMessage.editMapMessage?.message.deleteEntityMessage.id;
+            case "entity.delete": {
                 await this.mapEditorModeManager.executeLocalCommand(
                     new DeleteEntityFrontCommand(
                         this.scene.getGameMap().getWamFile()!,
-                        id,
+                        editMapCommandMessage.entityId,
                         commandId,
                         this.entitiesManager,
                     ),
                 );
                 break;
             }
-            case "modifyEntityMessage": {
-                const modifyEntityMessage = editMapCommandMessage.editMapMessage?.message.modifyEntityMessage;
+            case "entity.update": {
                 await this.mapEditorModeManager.executeLocalCommand(
                     new UpdateEntityFrontCommand(
                         this.scene.getGameMap().getWamFile()!,
-                        modifyEntityMessage.id,
-                        {
-                            ...modifyEntityMessage,
-                            properties: modifyEntityMessage.modifyProperties
-                                ? modifyEntityMessage.properties
-                                : undefined,
-                        },
+                        editMapCommandMessage.entityId,
+                        editMapCommandMessage.patch,
                         commandId,
                         undefined,
                         this.entitiesManager,
@@ -167,23 +155,20 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                 );
                 break;
             }
-            case "uploadEntityMessage": {
-                const uploadEntityMessage = editMapCommandMessage.editMapMessage?.message.uploadEntityMessage;
+            case "entity.upload": {
                 await this.mapEditorModeManager.executeLocalCommand(
                     new UploadEntityFrontCommand(
-                        uploadEntityMessage,
+                        editMapCommandMessage,
                         this.entitiesManager,
                         this.scene.getEntitiesCollectionsManager(),
                     ),
                 );
                 break;
             }
-            case "modifyCustomEntityMessage": {
-                const modifyCustomEntityMessage =
-                    editMapCommandMessage.editMapMessage?.message.modifyCustomEntityMessage;
+            case "entity.custom.modify": {
                 await this.mapEditorModeManager.executeLocalCommand(
                     new ModifyCustomEntityFrontCommand(
-                        modifyCustomEntityMessage,
+                        editMapCommandMessage,
                         this.scene.getEntitiesCollectionsManager(),
                         this.scene.getGameMapFrontWrapper(),
                         this.entitiesManager,
@@ -191,12 +176,10 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                 );
                 break;
             }
-            case "deleteCustomEntityMessage": {
-                const deleteCustomEntityMessage =
-                    editMapCommandMessage.editMapMessage?.message.deleteCustomEntityMessage;
+            case "entity.custom.delete": {
                 await this.mapEditorModeManager.executeLocalCommand(
                     new DeleteCustomEntityFrontCommand(
-                        deleteCustomEntityMessage,
+                        editMapCommandMessage,
                         this.scene.getGameMap().getWamFile(),
                         this.entitiesManager,
                         this.scene.getEntitiesCollectionsManager(),

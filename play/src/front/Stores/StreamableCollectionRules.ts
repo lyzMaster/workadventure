@@ -1,4 +1,4 @@
-import { AvailabilityStatus } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
 
 export const LOCAL_CAMERA_SMALL_SCREEN_WIDTH = 768;
 

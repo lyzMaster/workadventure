@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import type { Writable } from "svelte/store";
 import { writable } from "svelte/store";
 import type { CancelablePromise } from "cancelable-promise";
-import { PositionMessage_Direction } from "@workadventure/messages";
+import { Direction, type Direction as DirectionType } from "@workadventure/game-model";
 import type { PictureStore } from "../../Stores/PictureStore";
 import { TexturesHelper } from "../Helpers/TexturesHelper";
 import { PlayerAnimationTypes } from "../Player/Animation";
@@ -18,7 +18,7 @@ export interface CompanionStatus {
     y: number;
     name: string;
     moving: boolean;
-    direction: PositionMessage_Direction;
+    direction: DirectionType;
 }
 
 export class Companion extends Container {
@@ -27,9 +27,9 @@ export class Companion extends Container {
     private delta: number;
     private invisible: boolean;
     private updateListener: (time: number, delta: number) => void;
-    private target: { x: number; y: number; direction: PositionMessage_Direction };
+    private target: { x: number; y: number; direction: DirectionType };
 
-    private direction: PositionMessage_Direction;
+    private direction: DirectionType;
     private animationType: PlayerAnimationTypes;
     private readonly _pictureStore: Writable<string | undefined>;
     private texturePromise: CancelablePromise<string | void> | undefined;
@@ -41,9 +41,9 @@ export class Companion extends Container {
 
         this.delta = 0;
         this.invisible = true;
-        this.target = { x, y, direction: PositionMessage_Direction.DOWN };
+        this.target = { x, y, direction: Direction.DOWN };
 
-        this.direction = PositionMessage_Direction.DOWN;
+        this.direction = Direction.DOWN;
         this.animationType = PlayerAnimationTypes.Idle;
 
         this._pictureStore = writable(undefined);
@@ -74,7 +74,7 @@ export class Companion extends Container {
         this.scene.add.existing(this);
     }
 
-    public setTarget(x: number, y: number, direction: PositionMessage_Direction) {
+    public setTarget(x: number, y: number, direction: DirectionType) {
         this.target = { x, y: y + 4, direction };
     }
 
@@ -111,15 +111,15 @@ export class Companion extends Container {
 
             if (Math.abs(xDist) > Math.abs(yDist)) {
                 if (xDist < 0) {
-                    this.direction = PositionMessage_Direction.LEFT;
+                    this.direction = Direction.LEFT;
                 } else {
-                    this.direction = PositionMessage_Direction.RIGHT;
+                    this.direction = Direction.RIGHT;
                 }
             } else {
                 if (yDist < 0) {
-                    this.direction = PositionMessage_Direction.UP;
+                    this.direction = Direction.UP;
                 } else {
-                    this.direction = PositionMessage_Direction.DOWN;
+                    this.direction = Direction.DOWN;
                 }
             }
         }
@@ -144,7 +144,7 @@ export class Companion extends Container {
         });
     }
 
-    private playAnimation(direction: PositionMessage_Direction, type: PlayerAnimationTypes): void {
+    private playAnimation(direction: DirectionType, type: PlayerAnimationTypes): void {
         if (this.invisible) return;
 
         const directionStr = ProtobufClientUtils.toDirectionString(direction);

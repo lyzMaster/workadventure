@@ -1,4 +1,4 @@
-import { AvailabilityStatus } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
 
 export interface StatusRulesVerificationInterface {
     canChangeStatus: (actualStatus: AvailabilityStatus) => { to: (futureStatus: AvailabilityStatus) => boolean };

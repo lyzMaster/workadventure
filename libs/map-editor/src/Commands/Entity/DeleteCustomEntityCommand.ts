@@ -1,13 +1,17 @@
-import type { DeleteCustomEntityMessage } from "@workadventure/messages";
+import type { DeleteCustomEntityCommandDto } from "../Dto/EntityCommandDto";
 import { Command } from "../Command";
 import type { WamFile } from "../../GameMap/WamFile";
 
 export class DeleteCustomEntityCommand extends Command {
-    protected deleteCustomEntityMessage: DeleteCustomEntityMessage;
+    protected deleteCustomEntityMessage: Omit<DeleteCustomEntityCommandDto, "type" | "commandId" | "sceneId">;
     protected hostname: string | undefined;
     protected wamFile: WamFile | undefined;
 
-    constructor(deleteCustomEntityMessage: DeleteCustomEntityMessage, wamFile?: WamFile, hostname?: string) {
+    constructor(
+        deleteCustomEntityMessage: Omit<DeleteCustomEntityCommandDto, "type" | "commandId" | "sceneId">,
+        wamFile?: WamFile,
+        hostname?: string,
+    ) {
         super();
         this.deleteCustomEntityMessage = deleteCustomEntityMessage;
         this.hostname = hostname;

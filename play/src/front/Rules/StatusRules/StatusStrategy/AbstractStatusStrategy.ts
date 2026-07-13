@@ -1,4 +1,4 @@
-import { AvailabilityStatus } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
 import type { StatusStrategyInterface } from "../StatusStrategyInterface";
 import type { TimedRules } from "../statusRules";
 

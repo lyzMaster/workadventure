@@ -1,4 +1,4 @@
-import type { ErrorApiErrorData, ErrorApiRetryData, ErrorApiUnauthorizedData } from "@workadventure/messages";
+import type { ErrorApiErrorData, ErrorApiRetryData, ErrorApiUnauthorizedData } from "./ErrorScreenStore";
 import type { Room } from "../Connection/Room";
 
 type GameConnectionResult =

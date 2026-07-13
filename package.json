@@ -12,7 +12,6 @@
   "workspaces": [
     "play",
     "libs/*",
-    "benchmark",
     "play/packages/iframe-api-typings",
     "tests",
     "contrib/tools/e2e-report"

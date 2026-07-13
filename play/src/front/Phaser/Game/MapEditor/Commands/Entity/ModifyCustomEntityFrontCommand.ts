@@ -1,6 +1,4 @@
-import { ModifyCustomEntityCommand } from "@workadventure/map-editor";
-import type { ModifyCustomEntityMessage } from "@workadventure/messages";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
+import { ModifyCustomEntityCommand, type ModifyCustomEntityCommandDto } from "@workadventure/map-editor";
 import type { FrontCommand } from "../FrontCommand";
 import type { EntitiesCollectionsManager } from "../../EntitiesCollectionsManager";
 import type { GameMapFrontWrapper } from "../../../GameMap/GameMapFrontWrapper";
@@ -8,7 +6,7 @@ import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 
 export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand implements FrontCommand {
     constructor(
-        modifyCustomEntityMessage: ModifyCustomEntityMessage,
+        modifyCustomEntityMessage: Omit<ModifyCustomEntityCommandDto, "type" | "commandId" | "sceneId">,
         private entitiesCollectionManager: EntitiesCollectionsManager,
         private gameFrontWrapper: GameMapFrontWrapper,
         private entitiesManager: EntitiesManager,
@@ -16,8 +14,13 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
         super(modifyCustomEntityMessage);
     }
 
-    emitEvent(roomConnection: RoomConnection): void {
-        roomConnection.emitMapEditorModifyCustomEntity(this.commandId, this.modifyCustomEntityMessage);
+    toDto(sceneId: string): ModifyCustomEntityCommandDto {
+        return {
+            ...this.modifyCustomEntityMessage,
+            type: "entity.custom.modify",
+            commandId: this.commandId,
+            sceneId,
+        };
     }
 
     execute(): Promise<void> {

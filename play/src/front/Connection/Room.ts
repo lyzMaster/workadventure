@@ -1,6 +1,5 @@
 import { isAxiosError } from "axios";
-import type { LegalsData, OpidWokaNamePolicy, RecordingData } from "@workadventure/messages";
-import { isMapDetailsData, isRoomRedirect, ErrorApiData } from "@workadventure/messages";
+import { z } from "zod";
 import {
     CONTACT_URL,
     DISABLE_ANONYMOUS,
@@ -18,6 +17,28 @@ import { ApiError } from "../Stores/Errors/ApiError";
 import { ABSOLUTE_PUSHER_URL } from "../Enum/ComputedConst";
 import { axiosWithRetry } from "./AxiosUtils";
 import { localUserStore } from "./LocalUserStore";
+
+type OpidWokaNamePolicy = "force_opid" | "allow_override_opid" | "allow_override_opid_even_if_empty";
+type LegalsData = unknown;
+type RecordingData = unknown;
+
+const isRoomRedirect = z.object({
+    redirectUrl: z.string(),
+});
+
+const isMapDetailsData = z
+    .object({
+        mapUrl: z.string().optional(),
+        wamUrl: z.string().optional(),
+    })
+    .passthrough();
+
+const ErrorApiData = z
+    .object({
+        status: z.number().optional(),
+        type: z.enum(["error", "retry", "unauthorized", "redirect"]),
+    })
+    .passthrough();
 export class MapDetail {
     constructor(
         public readonly mapUrl?: string,

@@ -1,4 +1,4 @@
-import { AvailabilityStatus } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
 import type { RequestedStatus } from "../statusRules";
 
 export const requestedStatusFactory = {

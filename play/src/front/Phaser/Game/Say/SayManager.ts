@@ -1,4 +1,4 @@
-import { SayMessageType } from "@workadventure/messages";
+import { SayMessageType } from "@workadventure/game-model";
 import type { RoomConnection } from "../../../Connection/RoomConnection";
 import type { Player } from "../../Player/Player";
 import { hasMovedEventName } from "../../Player/Player";

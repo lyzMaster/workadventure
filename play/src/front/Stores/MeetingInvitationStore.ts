@@ -1,6 +1,11 @@
-import type { MeetingInvitationRequestReceivedMessage } from "@workadventure/messages";
 import { writable } from "svelte/store";
 import type { SpaceUserExtended } from "../Space/SpaceInterface";
+
+export type MeetingInvitationRequestReceivedMessage = {
+    userUuid: string;
+    userId?: number;
+    name?: string;
+};
 
 /** Pending meeting invitation received (to accept or decline). */
 export const meetingInvitationRequestStore = writable<MeetingInvitationRequestReceivedMessage | null>(null);

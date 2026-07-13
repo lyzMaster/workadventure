@@ -1,10 +1,9 @@
-import type { WamFile, WAMEntityData, WAMFileFormat } from "@workadventure/map-editor";
+import type { UpdateEntityCommandDto, WamFile, WAMEntityData, WAMFileFormat } from "@workadventure/map-editor";
 import { UpdateEntityCommand } from "@workadventure/map-editor";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 import type { Entity } from "../../../../ECS/Entity";
 import type { GameScene } from "../../../GameScene";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
-import type { RoomConnection } from "../../../../../Connection/RoomConnection";
 import { TexturesHelper } from "../../../../Helpers/TexturesHelper";
 
 export class UpdateEntityFrontCommand extends UpdateEntityCommand implements FrontCommandInterface {
@@ -39,25 +38,32 @@ export class UpdateEntityFrontCommand extends UpdateEntityCommand implements Fro
         );
     }
 
-    public emitEvent(roomConnection: RoomConnection): void {
+    public toDto(sceneId: string): UpdateEntityCommandDto {
         const entity = this.entitiesManager.getEntities().get(this.entityId);
         if (!entity) {
-            console.error("Entity not found");
-            return;
+            return {
+                type: "entity.update",
+                commandId: this.commandId,
+                sceneId,
+                entityId: this.entityId,
+                patch: this.newConfig,
+            };
         }
-        roomConnection.emitMapEditorModifyEntity(
-            this.commandId,
-            this.entityId,
-            {
+        return {
+            type: "entity.update",
+            commandId: this.commandId,
+            sceneId,
+            entityId: this.entityId,
+            patch: {
                 x: entity.x,
                 y: entity.y,
                 ...this.newConfig,
             },
-            {
+            dimensions: {
                 width: entity.width,
                 height: entity.height,
             },
-        );
+        };
     }
 
     private async handleEntityUpdate(config: Partial<WAMEntityData>): Promise<void> {

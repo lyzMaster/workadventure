@@ -1,4 +1,4 @@
-import type { AvailabilityStatus } from "@workadventure/messages";
+import type { AvailabilityStatus } from "@workadventure/game-model";
 
 export interface StatusStrategyInterface {
     applyBasicRules(): void;

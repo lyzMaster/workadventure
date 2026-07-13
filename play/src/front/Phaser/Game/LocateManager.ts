@@ -1,4 +1,4 @@
-import type { LocatePositionMessage as LocatePositionMessageProto } from "@workadventure/messages";
+import type { CharacterPosition } from "@workadventure/game-model";
 import { get } from "svelte/store";
 import type { RoomConnection } from "../../Connection/RoomConnection";
 import type { RemotePlayer } from "../Entity/RemotePlayer";
@@ -7,6 +7,12 @@ import LL from "../../../i18n/i18n-svelte";
 import { localUserStore } from "../../Connection/LocalUserStore";
 import type { CameraManager } from "./CameraManager";
 import type { GameScene } from "./GameScene";
+
+type LocatePositionMessage = {
+    userId: number;
+    userUuid: string;
+    position?: CharacterPosition;
+};
 
 /**
  * LocateManager handles the locate position feature, managing camera positioning,
@@ -63,7 +69,7 @@ export class LocateManager {
         });
     }
 
-    private handleLocatePositionMessage(message: LocatePositionMessageProto): void {
+    private handleLocatePositionMessage(message: LocatePositionMessage): void {
         // Check if the position is valid
         if (!message.position) {
             return;

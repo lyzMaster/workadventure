@@ -11,6 +11,7 @@ export * from "./Commands/Entity/DeleteCustomEntityCommand";
 export * from "./Commands/File/UploadFileCommand";
 export * from "./Commands/WAM/UpdateWAMSettingCommand";
 export * from "./Commands/WAM/UpdateWAMMetadataCommand";
+export * from "./Commands/Dto/MapEditorCommandDto";
 export * from "./GameMap/GameMap";
 export * from "./GameMap/GameMapAreas";
 export * from "./GameMap/WamFile";

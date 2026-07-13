@@ -1,6 +1,6 @@
-import type { PositionMessage } from "@workadventure/messages";
+import type { CharacterPosition } from "@workadventure/game-model";
 
-export interface HasPlayerMovedInterface extends PositionMessage {
+export interface HasPlayerMovedInterface extends CharacterPosition {
     oldX?: number;
     oldY?: number;
 }

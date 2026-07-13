@@ -1,16 +1,50 @@
 import { readable, writable } from "svelte/store";
-import type { ErrorApiErrorData, ErrorApiRetryData, ErrorApiUnauthorizedData } from "@workadventure/messages";
-import {
-    ErrorScreenMessage,
-    isErrorApiErrorData,
-    isErrorApiRetryData,
-    isErrorApiUnauthorizedData,
-} from "@workadventure/messages";
 import { isAxiosError } from "axios";
+import { z } from "zod";
 
 import logoImg from "../Components/images/logo-min-white.png";
 import errorGif from "../Components/UI/images/error.gif";
 import { ApiError } from "./Errors/ApiError";
+
+export type ErrorScreenMessage = {
+    type?: "error" | "retry" | "unauthorized" | "redirect" | "reconnecting";
+    code?: string;
+    title?: string;
+    subtitle?: string;
+    details?: string;
+    image?: string;
+    imageLogo?: string;
+    timeToRetry?: number;
+    buttonTitle?: string;
+    canRetryManual?: boolean;
+    urlToRedirect?: string;
+};
+
+export type ErrorApiErrorData = ErrorScreenMessage & { type: "error"; status?: number };
+export type ErrorApiRetryData = ErrorScreenMessage & { type: "retry"; status?: number };
+export type ErrorApiUnauthorizedData = ErrorScreenMessage & { type: "unauthorized"; status?: number };
+
+const ErrorApiBaseData = z.object({
+    status: z.number().optional(),
+    code: z.string().optional(),
+    title: z.string().optional(),
+    subtitle: z.string().optional(),
+    details: z.string().optional(),
+    image: z.string().optional(),
+    imageLogo: z.string().optional(),
+    timeToRetry: z.number().optional(),
+    buttonTitle: z.string().optional().nullable(),
+    canRetryManual: z.boolean().optional(),
+    urlToRedirect: z.string().optional(),
+});
+
+const isErrorApiErrorData = ErrorApiBaseData.extend({ type: z.literal("error") });
+const isErrorApiRetryData = ErrorApiBaseData.extend({ type: z.literal("retry") });
+const isErrorApiUnauthorizedData = ErrorApiBaseData.extend({ type: z.literal("unauthorized") });
+
+export function createErrorScreenMessage(message: ErrorScreenMessage): ErrorScreenMessage {
+    return message;
+}
 
 const errorLogo = new Image();
 errorLogo.src = logoImg;
@@ -100,7 +134,7 @@ function createErrorScreenStore() {
 
             if (typeof error === "string" || error instanceof String) {
                 set(
-                    ErrorScreenMessage.fromPartial({
+                    createErrorScreenMessage({
                         image: "/resources/icons/new_version.png",
                         imageLogo: "/static/images/logo.png",
                         type: "error",
@@ -117,7 +151,7 @@ function createErrorScreenStore() {
                 console.error("Axios error. Request:", error.request, " - Response: ", error.response);
 
                 set(
-                    ErrorScreenMessage.fromPartial({
+                    createErrorScreenMessage({
                         type: "error",
                         code: "HTTP_ERROR",
                         title:
@@ -135,7 +169,7 @@ function createErrorScreenStore() {
                 // client never received a response, or request never left
                 console.error("Axios error. No full HTTP response received. Request to URL:", error.config?.url);
                 set(
-                    ErrorScreenMessage.fromPartial({
+                    createErrorScreenMessage({
                         type: "error",
                         code: "NETWORK_ERROR",
                         title: "Network error",
@@ -151,13 +185,13 @@ function createErrorScreenStore() {
                 switch (errorApiWithoutStatus.type) {
                     case "error":
                     case "redirect": {
-                        set(ErrorScreenMessage.fromPartial(errorApiWithoutStatus));
+                        set(createErrorScreenMessage(errorApiWithoutStatus));
                         return;
                     }
                     case "retry":
                     case "unauthorized": {
                         set(
-                            ErrorScreenMessage.fromPartial({
+                            createErrorScreenMessage({
                                 ...errorApiWithoutStatus,
                                 buttonTitle: errorApiWithoutStatus.buttonTitle ?? undefined,
                             }),
@@ -175,7 +209,7 @@ function createErrorScreenStore() {
             if (error instanceof Error) {
                 // Error
                 set(
-                    ErrorScreenMessage.fromPartial({
+                    createErrorScreenMessage({
                         type: "error",
                         code: "INTERNAL_ERROR",
                         title: "An error occurred",

@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Unsubscriber } from "svelte/store";
-    import type { AvailabilityStatus } from "@workadventure/messages";
+    import type { AvailabilityStatus } from "@workadventure/game-model";
     import { onDestroy, onMount } from "svelte";
     import { wokaMenuStore, wokaMenuProgressStore } from "../../Stores/WokaMenuStore";
     import ButtonClose from "../Input/ButtonClose.svelte";

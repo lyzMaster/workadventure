@@ -1,6 +1,5 @@
 import * as Phaser from "phaser";
-import type { AreaData } from "@workadventure/map-editor";
-import type { EditMapCommandMessage } from "@workadventure/messages";
+import type { AreaData, LocalMapEditorCommand } from "@workadventure/map-editor";
 import { get } from "svelte/store";
 import { userIsAdminStore, userIsEditorStore } from "../../../../Stores/GameStore";
 import { mapEditorSelectedAreaPreviewStore, mapEditorVisibilityStore } from "../../../../Stores/MapEditorStore";
@@ -77,7 +76,7 @@ export class TrashEditorTool extends EntityRelatedEditorTool {
         this.scene.markDirty();
     }
 
-    handleIncomingCommandMessage(editMapCommandMessage: EditMapCommandMessage): Promise<void> {
+    handleIncomingCommandMessage(editMapCommandMessage: LocalMapEditorCommand): Promise<void> {
         return Promise.resolve(undefined);
     }
 

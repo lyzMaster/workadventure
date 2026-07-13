@@ -1,4 +1,4 @@
-import { AvailabilityStatus } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
 import { getColorOfStatus } from "../../Utils/AvailabilityStatus";
 
 const STATUS_DOT_BORDER_WIDTH = 1;

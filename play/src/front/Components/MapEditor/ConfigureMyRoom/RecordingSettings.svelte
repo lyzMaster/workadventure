@@ -41,13 +41,10 @@
         try {
             loading = true;
             await executeUpdateWAMSettings({
-                $case: "updateRecordingSettingMessage",
-                updateRecordingSettingMessage: {
-                    settings: {
-                        rights: (rights || []).map((right) => right.value),
-                        enableSounds: enableSounds,
-                    } satisfies RecordingSettings,
-                },
+                recording: {
+                    rights: (rights || []).map((right) => right.value),
+                    enableSounds: enableSounds,
+                } satisfies RecordingSettings,
             });
             return $LL.mapEditor.settings.recording.inputs.error.save.success();
         } catch (error) {

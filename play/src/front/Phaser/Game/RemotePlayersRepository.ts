@@ -1,13 +1,41 @@
-import type { PlayerDetailsUpdatedMessage, UserMovedMessage } from "@workadventure/messages";
-import { AvailabilityStatus, availabilityStatusToJSON } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
+import type { CharacterPosition, CharacterSayType } from "@workadventure/game-model";
 import { Deferred } from "@workadventure/shared-utils";
 import type { Observable } from "rxjs";
 import { BehaviorSubject } from "rxjs";
 import type { MessageUserJoined } from "../../Connection/ConnexionModels";
 import type { AddPlayerEvent } from "../../Api/Events/AddPlayerEvent";
 import { iframeListener } from "../../Api/IframeListener";
-import { RoomConnection } from "../../Connection/RoomConnection";
 import { debugAddPlayer, debugRemovePlayer } from "../../Utils/Debuggers";
+
+type UserMovedMessage = {
+    userId: number;
+    position?: CharacterPosition;
+};
+
+type PlayerDetailsUpdatedMessage = {
+    userId: number;
+    details?: {
+        removeOutlineColor?: boolean;
+        outlineColor?: number;
+        showVoiceIndicator?: boolean;
+        availabilityStatus: AvailabilityStatus;
+        chatID?: string | null;
+        setVariable?: { name: string; value: string };
+        sayMessage?: { message: string; type: CharacterSayType };
+    };
+};
+
+function unserializeVariable(value: string): unknown {
+    try {
+        return JSON.parse(value);
+    } catch (error) {
+        console.error(`Unable to unserialize player variable "${value}"`, error);
+        return undefined;
+    }
+}
+
+const availabilityStatusToJSON = (availabilityStatus: AvailabilityStatus): AvailabilityStatus => availabilityStatus;
 
 export interface RemotePlayerData extends MessageUserJoined {
     showVoiceIndicator: boolean;
@@ -157,7 +185,7 @@ export class RemotePlayersRepository {
             updateStruct.updated.chatID = true;
         }
         if (details.setVariable !== undefined) {
-            const value = RoomConnection.unserializeVariable(details.setVariable.value);
+            const value = unserializeVariable(details.setVariable.value);
             player.variables.set(details.setVariable.name, value);
 
             // TODO: is it the responsibility of RemotePlayersRepository to send messages to the iframe?

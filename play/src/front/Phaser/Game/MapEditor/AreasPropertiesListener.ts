@@ -24,8 +24,6 @@ import { getSpeakerMegaphoneAreaInfo, getSpeakerMegaphoneAreaName } from "@worka
 import { Jitsi } from "@workadventure/shared-utils";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
-import type { Member } from "@workadventure/messages";
-import { FilterType } from "@workadventure/messages";
 import { AbortError } from "@workadventure/shared-utils/src/Abort/AbortError";
 import { LL } from "../../../../i18n/i18n-svelte";
 import { analyticsClient } from "../../../Administration/AnalyticsClient";
@@ -97,6 +95,17 @@ import { touchScreenManager } from "../../../Touch/TouchScreenManager";
 
 import Rectangle = Phaser.Geom.Rectangle;
 import Color = Phaser.Display.Color;
+
+type Member = {
+    id: string;
+    name?: string;
+};
+
+const FilterType = {
+    ALL_USERS: "allUsers",
+    LIVE_STREAMING_USERS: "liveStreamingUsers",
+    LIVE_STREAMING_USERS_WITH_FEEDBACK: "liveStreamingUsersWithFeedback",
+} as const;
 
 /**
  * Represents the state of an active megaphone zone (speaker or listener).

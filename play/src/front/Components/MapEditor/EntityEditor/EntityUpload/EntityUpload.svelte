@@ -1,9 +1,7 @@
 <script lang="ts">
-    import type { UploadEntityMessage } from "@workadventure/messages";
-    import { CustomEntityDirection } from "@workadventure/messages";
     import { onDestroy } from "svelte";
     import { v4 as uuidv4 } from "uuid";
-    import type { EntityPrefab } from "@workadventure/map-editor";
+    import type { EntityPrefab, UploadEntityCommandDto } from "@workadventure/map-editor";
     import { Direction, ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT } from "@workadventure/map-editor";
     import LL from "../../../../../i18n/i18n-svelte";
     import { mapEditorEntityUploadEventStore, selectCategoryStore } from "../../../../Stores/MapEditorStore";
@@ -48,7 +46,9 @@
     function isASupportedFormat(format: string): boolean {
         return format.trim().length > 0 && ENTITY_UPLOAD_SUPPORTED_FORMATS_FRONT.includes(format);
     }
-    function completeAndResetUpload(uploadEntityMessage: UploadEntityMessage | undefined) {
+    function completeAndResetUpload(
+        uploadEntityMessage: Omit<UploadEntityCommandDto, "type" | "commandId" | "sceneId"> | undefined,
+    ) {
         if (uploadEntityMessage === undefined && files !== undefined) {
             initFileUpload();
         }
@@ -69,7 +69,7 @@
             mapEditorEntityUploadEventStore.set({
                 id: generatedId,
                 file: fileAsUint8Array,
-                direction: CustomEntityDirection.Down,
+                direction: "down",
                 name: customEditedEntity.name,
                 tags: $state.snapshot(customEditedEntity.tags),
                 imagePath: `${generatedId}-${fileToUpload.name}`,

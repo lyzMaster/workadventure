@@ -1,11 +1,11 @@
-import type { UploadEntityMessage } from "@workadventure/messages";
+import type { UploadEntityCommandDto } from "../Dto/EntityCommandDto";
 import { Command } from "../Command";
 
 export class UploadEntityCommand extends Command {
-    protected uploadEntityMessage: UploadEntityMessage;
+    protected uploadEntityMessage: Omit<UploadEntityCommandDto, "type" | "commandId" | "sceneId">;
     protected hostname: string | undefined;
 
-    constructor(uploadEntityMessage: UploadEntityMessage, hostname?: string) {
+    constructor(uploadEntityMessage: Omit<UploadEntityCommandDto, "type" | "commandId" | "sceneId">, hostname?: string) {
         super();
         this.uploadEntityMessage = uploadEntityMessage;
         this.hostname = hostname;

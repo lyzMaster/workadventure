@@ -1,6 +1,6 @@
 import { readable, writable, type Readable } from "svelte/store";
 import { MapStore } from "@workadventure/store-utils";
-import type { AvailabilityStatus } from "@workadventure/messages";
+import type { AvailabilityStatus } from "@workadventure/game-model";
 
 export type ChatUser = {
     chatId: string;

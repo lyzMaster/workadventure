@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { AvailabilityStatus } from "@workadventure/messages";
+    import { AvailabilityStatus } from "@workadventure/game-model";
     import type { Readable } from "svelte/store";
     import { derived } from "svelte/store";
     import { analyticsClient } from "../../../Administration/AnalyticsClient";

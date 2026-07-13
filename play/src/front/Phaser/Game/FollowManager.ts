@@ -1,12 +1,13 @@
 import type { Subscription } from "rxjs";
 import { get } from "svelte/store";
-import { availabilityStatusToJSON } from "@workadventure/messages";
 import type { RoomConnection } from "../../Connection/RoomConnection";
 import { localUserStore } from "../../Connection/LocalUserStore";
 import { followRoleStore, followStateStore, followUsersStore } from "../../Stores/FollowStore";
 import { popupStore } from "../../Stores/PopupStore";
 import { iframeListener } from "../../Api/IframeListener";
 import type { RemotePlayersRepository } from "./RemotePlayersRepository";
+
+const availabilityStatusToJSON = (availabilityStatus: string): string => availabilityStatus;
 
 export class FollowManager {
     private subscriptions: Subscription[] = [];

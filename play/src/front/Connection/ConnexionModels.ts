@@ -1,26 +1,23 @@
 import type { SignalData } from "@workadventure/simple-peer";
-import type {
-    RoomConnectedMessage,
-    ApplicationDefinitionInterface,
-    AvailabilityStatus,
-    EditMapCommandMessage,
-    PositionMessage,
-    SayMessage,
-} from "@workadventure/messages";
+import type { AvailabilityStatus, CharacterPosition, CharacterSayType } from "@workadventure/game-model";
+import type { LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { WokaTextureDescriptionInterface } from "../Phaser/Entity/PlayerTextures";
 import type { CompanionTextureDescriptionInterface } from "../Phaser/Companion/CompanionTextures";
 import type { RoomConnection } from "./RoomConnection";
 
+export type ApplicationDefinitionInterface = Record<string, unknown>;
+export type RoomConnectedMessage = Record<string, unknown>;
+
 export interface MessageUserMovedInterface {
     userId: number;
-    position: PositionMessage;
+    position: CharacterPosition;
 }
 
 export interface MessageUserJoined {
     userId: number;
     name: string;
     characterTextures: WokaTextureDescriptionInterface[];
-    position: PositionMessage;
+    position: CharacterPosition;
     availabilityStatus: AvailabilityStatus;
     visitCardUrl: string | null;
     companionTexture: CompanionTextureDescriptionInterface | undefined;
@@ -28,7 +25,7 @@ export interface MessageUserJoined {
     outlineColor: number | undefined;
     variables: Map<string, unknown>;
     chatID?: string;
-    sayMessage?: SayMessage;
+    sayMessage?: { message: string; type: CharacterSayType };
     activate?: () => void;
 }
 
@@ -87,7 +84,7 @@ export interface RoomJoinedMessageInterface {
     areaPropertyVariables: AreaPropertyVariable[];
     characterTextures: WokaTextureDescriptionInterface[];
     companionTexture?: CompanionTextureDescriptionInterface;
-    commandsToApply?: EditMapCommandMessage[];
+    commandsToApply?: LocalMapEditorCommand[];
     applications: ApplicationDefinitionInterface[];
 }
 

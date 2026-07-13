@@ -1,10 +1,12 @@
-import type { AreaData, EntityDataProperties, EntityPrefab } from "@workadventure/map-editor";
-import { writable } from "svelte/store";
 import type {
-    DeleteCustomEntityMessage,
-    ModifyCustomEntityMessage,
-    UploadEntityMessage,
-} from "@workadventure/messages";
+    AreaData,
+    DeleteCustomEntityCommandDto,
+    EntityDataProperties,
+    EntityPrefab,
+    ModifyCustomEntityCommandDto,
+    UploadEntityCommandDto,
+} from "@workadventure/map-editor";
+import { writable } from "svelte/store";
 import type { AreaPreview } from "../Phaser/Components/MapEditor/AreaPreview";
 import type { Entity } from "../Phaser/ECS/Entity";
 import type { EditorToolName } from "../Phaser/Game/MapEditor/MapEditorModeManager";
@@ -62,9 +64,15 @@ export const mapEditorCopiedEntityDataPropertiesStore = writable<EntityDataPrope
 
 export const mapEditorEntityModeStore = writable<MapEditorEntityToolMode>("ADD");
 
-export const mapEditorEntityUploadEventStore = writable<UploadEntityMessage | undefined>(undefined);
-export const mapEditorModifyCustomEntityEventStore = writable<ModifyCustomEntityMessage | undefined>(undefined);
-export const mapEditorDeleteCustomEntityEventStore = writable<DeleteCustomEntityMessage | undefined>(undefined);
+export const mapEditorEntityUploadEventStore = writable<
+    Omit<UploadEntityCommandDto, "type" | "commandId" | "sceneId"> | undefined
+>(undefined);
+export const mapEditorModifyCustomEntityEventStore = writable<
+    Omit<ModifyCustomEntityCommandDto, "type" | "commandId" | "sceneId"> | undefined
+>(undefined);
+export const mapEditorDeleteCustomEntityEventStore = writable<
+    Omit<DeleteCustomEntityCommandDto, "type" | "commandId" | "sceneId"> | undefined
+>(undefined);
 
 export const mapEditorEntityFileDroppedStore = writable<boolean>(false);
 

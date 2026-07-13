@@ -10,14 +10,7 @@ import { ForwardableStore, MapStore } from "@workadventure/store-utils";
 import { MathUtils } from "@workadventure/math-utils";
 import { CancelablePromise } from "cancelable-promise";
 import { ChatMessageTypes, Deferred, SpatialMap } from "@workadventure/shared-utils";
-import {
-    AvailabilityStatus,
-    availabilityStatusToJSON,
-    ErrorScreenMessage,
-    FilterType,
-    type GroupUsersUpdateMessage,
-    PositionMessage_Direction,
-} from "@workadventure/messages";
+import { AvailabilityStatus, Direction } from "@workadventure/game-model";
 import { z } from "zod";
 import type { ITiledMap, ITiledMapLayer, ITiledMapObject, ITiledMapTileset } from "@workadventure/tiled-map-type-guard";
 import {
@@ -69,10 +62,7 @@ import { localUserStore } from "../../Connection/LocalUserStore";
 import { HtmlUtils } from "../../WebRtc/HtmlUtils";
 import { Loader } from "../Components/Loader";
 import { RemotePlayer } from "../Entity/RemotePlayer";
-import { SelectCharacterScene, SelectCharacterSceneName } from "../Login/SelectCharacterScene";
 import { hasMovedEventName, Player, requestEmoteEventName } from "../Player/Player";
-import { ErrorSceneName } from "../Reconnecting/ErrorScene";
-import { ReconnectingSceneName } from "../Reconnecting/ReconnectingScene";
 import { TextUtils } from "../Components/TextUtils";
 import { joystickBaseImg, joystickBaseKey, joystickThumbImg, joystickThumbKey } from "../Components/MobileJoystick";
 import { PropertyUtils } from "../Map/PropertyUtils";
@@ -80,6 +70,7 @@ import { analyticsClient } from "../../Administration/AnalyticsClient";
 import { PathfindingManager } from "../../Utils/PathfindingManager";
 import type {
     GroupCreatedUpdatedMessageInterface,
+    GroupUsersUpdateMessageInterface,
     MessageUserMovedInterface,
     OnConnectInterface,
     PositionInterface,
@@ -109,7 +100,7 @@ import {
 import type { WasCameraUpdatedEvent } from "../../Api/Events/WasCameraUpdatedEvent";
 import { audioManagerFileStore, bubbleSoundStore } from "../../Stores/AudioManagerStore";
 import { currentPlayerGroupIdStore, currentPlayerGroupLockStateStore } from "../../Stores/CurrentPlayerGroupStore";
-import { errorScreenStore } from "../../Stores/ErrorScreenStore";
+import { createErrorScreenMessage, errorScreenStore } from "../../Stores/ErrorScreenStore";
 import {
     availabilityStatusStore,
     batchGetUserMediaStore,
@@ -152,13 +143,16 @@ import {
 } from "../../Stores/MapEditorStore";
 import { refreshPromptStore } from "../../Stores/RefreshPromptStore";
 import { mapDeletedPromptStore } from "../../Stores/MapDeletedPromptStore";
-import { SpaceRegistry } from "../../Space/SpaceRegistry/SpaceRegistry";
-import { SpaceScriptingBridgeService } from "../../Space/Utils/SpaceScriptingBridgeService";
+import {
+    StandaloneSpaceRegistry,
+    StandaloneSpaceScriptingBridgeService,
+    type StandaloneSpaceInterface,
+    type StandaloneSpaceRegistryInterface,
+} from "../../Stores/StandaloneSpaceRegistry";
 import { debugAddPlayer, debugRemovePlayer, debugUpdatePlayer, debugZoom } from "../../Utils/Debuggers";
 import { BroadcastService } from "../../Streaming/BroadcastService";
 import { megaphoneCanBeUsedStore, megaphoneSpaceSettingsStore, megaphoneSpaceStore } from "../../Stores/MegaphoneStore";
 import { CompanionTextureError } from "../../Exception/CompanionTextureError";
-import { SelectCompanionScene, SelectCompanionSceneName } from "../Login/SelectCompanionScene";
 import { scriptUtils } from "../../Api/ScriptUtils";
 import { statusChanger } from "../../Components/ActionBar/AvailabilityStatus/statusChanger";
 import { warningMessageStore } from "../../Stores/ErrorStore";
@@ -172,7 +166,6 @@ import {
     type ProximityChatRoomKind,
 } from "../../Stores/StandaloneProximityChat";
 import { noMicrophoneSoundWarningVisibleStore } from "../../Stores/NoMicrophoneSoundWarningVisibleStore";
-import type { SpaceRegistryInterface } from "../../Space/SpaceRegistry/SpaceRegistryInterface";
 import { WorldUserProvider } from "../../Chat/UserProvider/WorldUserProvider";
 import { ChatUserProvider } from "../../Chat/UserProvider/ChatUserProvider";
 import { UserProviderMerger } from "../../Chat/UserProviderMerger/UserProviderMerger";
@@ -183,7 +176,6 @@ import { calendarEventsStore, isActivatedStore as isCalendarActiveStore } from "
 import { isActivatedStore as isTodoListActiveStore, todoListsStore } from "../../Stores/TodoListStore";
 import { externalSvelteComponentService } from "../../Stores/Utils/externalSvelteComponentService";
 import type { ExtensionModule } from "../../ExternalModule/ExtensionModule";
-import type { SpaceInterface } from "../../Space/SpaceInterface";
 import type { UserProviderInterface } from "../../Chat/UserProvider/UserProviderInterface";
 import { registerAdditionalMenuItem, unregisterAdditionalMenuItem } from "../../Stores/AdditionalItemsMenuStore";
 import { popupStore } from "../../Stores/PopupStore";
@@ -276,7 +268,7 @@ interface DeleteGroupEventInterface {
 
 interface GroupUsersUpdatedEventInterface {
     type: "GroupUsersUpdatedEvent";
-    event: GroupUsersUpdateMessage;
+    event: GroupUsersUpdateMessageInterface;
 }
 
 interface PositionCoordinates {
@@ -285,7 +277,14 @@ interface PositionCoordinates {
 }
 
 const WORLD_SPACE_NAME = "allWorldUser";
+const SelectCharacterSceneName = "SelectCharacterScene";
+const SelectCompanionSceneName = "SelectCompanionScene";
+const ErrorSceneName = "ErrorScene";
+const ReconnectingSceneName = "ReconnectingScene";
 const debug = Debug("GameScene");
+const FilterType = {
+    ALL_USERS: "allUsers",
+} as const;
 
 export class GameScene extends DirtyScene {
     Terrains: Array<Tileset>;
@@ -310,7 +309,7 @@ export class GameScene extends DirtyScene {
     currentTick!: number;
     lastSentTick!: number; // The last tick at which a position was sent.
     lastMoveEventSent: HasPlayerMovedInterface = {
-        direction: PositionMessage_Direction.DOWN,
+        direction: Direction.DOWN,
         moving: false,
         x: -1000,
         y: -1000,
@@ -415,9 +414,9 @@ export class GameScene extends DirtyScene {
         this.currentCompanionTextureReject = reject;
     });
     private _applicationManager: ApplicationManager | undefined;
-    private _spaceRegistry: SpaceRegistryInterface | undefined;
-    private spaceScriptingBridgeService: SpaceScriptingBridgeService | undefined;
-    private allUserSpace: SpaceInterface | undefined;
+    private _spaceRegistry: StandaloneSpaceRegistryInterface | undefined;
+    private spaceScriptingBridgeService: StandaloneSpaceScriptingBridgeService | undefined;
+    private allUserSpace: StandaloneSpaceInterface | undefined;
     private isLiveStreamingUnsubscriber: Unsubscriber | undefined;
     private shouldPublishScreenShareUnsubscriber: Unsubscriber | undefined;
     private unregisterAudioContextPlaybackRetry: Unsubscriber | undefined;
@@ -623,7 +622,7 @@ export class GameScene extends DirtyScene {
 
         this.loader.removeLoader();
         errorScreenStore.setError(
-            ErrorScreenMessage.fromPartial({
+            createErrorScreenMessage({
                 type: "error",
                 code: errorCode,
                 title: errorTitle,
@@ -856,7 +855,7 @@ export class GameScene extends DirtyScene {
                             return;
                         }
                         errorScreenStore.setError(
-                            ErrorScreenMessage.fromPartial({
+                            createErrorScreenMessage({
                                 type: "reconnecting",
                                 code: "CONNECTION_LOST",
                                 title: get(LL).warning.connectionLostTitle(),
@@ -891,7 +890,7 @@ export class GameScene extends DirtyScene {
                          * TODO: create connection status with invalid layer case and not display this error.
                          **/
                         /*errorScreenStore.setError(
-                            ErrorScreenMessage.fromPartial({
+                            createErrorScreenMessage({
                                 type: "reconnecting",
                                 code: "CONNECTION_PENDING",
                                 title: get(LL).warning.waitingConnectionTitle(),
@@ -2088,8 +2087,8 @@ export class GameScene extends DirtyScene {
 
                 this.enterLeaveScriptingService = new EnterLeaveScriptingService(this.gameMapFrontWrapper, this);
 
-                this._spaceRegistry = new SpaceRegistry(this.connection);
-                this.spaceScriptingBridgeService = new SpaceScriptingBridgeService(this._spaceRegistry);
+                this._spaceRegistry = new StandaloneSpaceRegistry();
+                this.spaceScriptingBridgeService = new StandaloneSpaceScriptingBridgeService(this._spaceRegistry);
 
                 videoStreamStore.forward(this._spaceRegistry.videoStreamStore);
                 screenShareStreamStore.forward(this._spaceRegistry.screenShareStreamStore);
@@ -2114,7 +2113,7 @@ export class GameScene extends DirtyScene {
                             name: message.name,
                             userUuid: message.userUuid,
                             outlineColor: message.outlineColor,
-                            availabilityStatus: availabilityStatusToJSON(message.availabilityStatus),
+                            availabilityStatus: message.availabilityStatus,
                             position: message.position,
                             variables: message.variables,
                             chatID: message.chatID,
@@ -2347,7 +2346,7 @@ export class GameScene extends DirtyScene {
             {
                 x: this.CurrentPlayer.x,
                 y: this.CurrentPlayer.y,
-                direction: PositionMessage_Direction.DOWN,
+                direction: Direction.DOWN,
                 moving: false,
             },
             this.getViewport(true),
@@ -4102,7 +4101,7 @@ ${escapedMessage}
                 startPosition.y,
                 this.playerName,
                 this.currentPlayerTexturesPromise,
-                PositionMessage_Direction.DOWN,
+                Direction.DOWN,
                 false,
                 gameManager.getCompanionTextureId() != undefined ? this.currentCompanionTexturePromise : undefined,
             );
@@ -4118,10 +4117,8 @@ ${escapedMessage}
         } catch (error) {
             if (error instanceof CharacterTextureError) {
                 console.warn("Error while loading current player character texture", error.message);
-                gameManager.leaveGame(SelectCharacterSceneName, new SelectCharacterScene());
             } else if (error instanceof CompanionTextureError) {
                 console.warn("Error while loading current player companion texture", error.message);
-                gameManager.leaveGame(SelectCompanionSceneName, new SelectCompanionScene());
             }
             throw error;
         }
@@ -4416,7 +4413,7 @@ ${escapedMessage}
     //todo: put this into an 'orchestrator' scene (EntryScene?)
     private bannedUser() {
         errorScreenStore.setError(
-            ErrorScreenMessage.fromPartial({
+            createErrorScreenMessage({
                 type: "error",
                 code: "USER_BANNED",
                 title: "BANNED",
@@ -4533,7 +4530,7 @@ ${escapedMessage}
         return this._applicationManager;
     }
 
-    get spaceRegistry(): SpaceRegistryInterface {
+    get spaceRegistry(): StandaloneSpaceRegistryInterface {
         if (!this._spaceRegistry) {
             throw new Error("_spaceRegistry not yet initialized");
         }

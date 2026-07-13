@@ -1,5 +1,5 @@
 import { get } from "svelte/store";
-import { AvailabilityStatus } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
 import type { LocalizedString } from "typesafe-i18n";
 import LL from "../../i18n/i18n-svelte";
 import type { StatusInformationInterface } from "../Components/ActionBar/AvailabilityStatus/Interfaces/AvailabilityStatusPropsInterface";
@@ -31,8 +31,9 @@ export const getColorHexOfStatus = (status: AvailabilityStatus): string => {
 };
 
 export const getStatusLabel = (status: AvailabilityStatus): string => {
-    //@ts-ignore Enum[key] is a string in Typescript
-    const fn = get(LL).actionbar.status[AvailabilityStatus[status]];
+    const statusKey = Object.entries(AvailabilityStatus).find(([, value]) => value === status)?.[0];
+    const statusLabels = get(LL).actionbar.status as Record<string, (() => string) | undefined>;
+    const fn = statusKey ? statusLabels[statusKey] : undefined;
     return fn?.() || "Unknown";
 };
 

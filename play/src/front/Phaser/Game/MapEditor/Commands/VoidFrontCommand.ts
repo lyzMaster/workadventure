@@ -1,5 +1,4 @@
-import { Command } from "@workadventure/map-editor";
-import type { RoomConnection } from "../../../../Connection/RoomConnection";
+import { Command, type LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { FrontCommandInterface } from "./FrontCommandInterface";
 
 export class VoidFrontCommand extends Command implements FrontCommandInterface {
@@ -11,7 +10,11 @@ export class VoidFrontCommand extends Command implements FrontCommandInterface {
         return this;
     }
 
-    public emitEvent(roomConnection: RoomConnection): void {
-        // Do nothing
+    public toDto(sceneId: string): LocalMapEditorCommand {
+        return {
+            type: "wam.metadata.update",
+            commandId: this.commandId,
+            sceneId,
+        };
     }
 }

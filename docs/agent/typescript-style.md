@@ -20,9 +20,9 @@ Type-only imports and import ordering are enforced by ESLint.
 
 ```typescript
 import type { ServerDuplexStream } from "@grpc/grpc-js";
-import type { CharacterTextureMessage } from "@workadventure/messages";
+import type { CharacterTexture } from "@workadventure/game-model";
 
-import { AvailabilityStatus } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
 
 import { PlayerVariables } from "../Services/PlayersRepository/PlayerVariables";
 ```

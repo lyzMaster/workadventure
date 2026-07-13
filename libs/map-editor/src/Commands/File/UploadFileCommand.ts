@@ -1,11 +1,11 @@
-import type { UploadFileMessage } from "@workadventure/messages";
+import type { UploadFileCommandDto } from "../Dto/FileCommandDto";
 import { Command } from "../Command";
 
 export class UploadFileCommand extends Command {
-    protected uploadFileMessage: UploadFileMessage;
+    protected uploadFileMessage: Omit<UploadFileCommandDto, "type" | "commandId" | "sceneId">;
     protected hostname: string | undefined;
 
-    constructor(uploadFileMessage: UploadFileMessage, hostname?: string) {
+    constructor(uploadFileMessage: Omit<UploadFileCommandDto, "type" | "commandId" | "sceneId">, hostname?: string) {
         super();
         this.uploadFileMessage = uploadFileMessage;
         this.hostname = hostname;

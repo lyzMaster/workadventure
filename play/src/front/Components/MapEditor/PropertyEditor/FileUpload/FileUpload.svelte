@@ -1,8 +1,7 @@
 <script lang="ts">
     import { v4 as uuidv4 } from "uuid";
-    import type { OpenFilePropertyData } from "@workadventure/map-editor";
+    import type { OpenFilePropertyData, UploadFileCommandDto } from "@workadventure/map-editor";
     import { FILE_UPLOAD_SUPPORTED_FORMATS_FRONT } from "@workadventure/map-editor";
-    import type { UploadFileMessage } from "@workadventure/messages";
     import { get } from "svelte/store";
     import * as Sentry from "@sentry/svelte";
     import { GRPC_MAX_MESSAGE_SIZE } from "../../../../Enum/EnvironmentVariable";
@@ -24,7 +23,7 @@
     let files: FileList | undefined = $state(undefined);
     let dropZoneRef: HTMLDivElement | undefined = $state();
     let errorOnFile: string | undefined = $state();
-    let fileToUpload: UploadFileMessage | undefined = undefined;
+    let fileToUpload: Omit<UploadFileCommandDto, "type" | "commandId" | "sceneId"> | undefined = undefined;
     const BYTES_TO_MB = 1024 * 1024;
 
     const filesUploadFormat = FILE_UPLOAD_SUPPORTED_FORMATS_FRONT.split(",").map(
@@ -64,16 +63,13 @@
             propertyId: property.id,
         };
 
-        const roomConnection = gameManager.getCurrentGameScene()?.connection;
-        if (roomConnection === undefined) throw new Error("No connection");
-
         const mapStorageUrl = get(gameSceneStore)?.room.mapStorageUrl;
         if (!mapStorageUrl) {
             throw new Error("No map storage URL found");
         }
 
         const uploadFileCommand = new UploadFileFrontCommand(fileToUpload);
-        uploadFileCommand.emitEvent(roomConnection);
+        await gameManager.getCurrentGameScene().getMapEditorModeManager().executeCommand(uploadFileCommand);
 
         const lastDot = file.name.lastIndexOf(".");
         const fileName = file.name.slice(0, lastDot);

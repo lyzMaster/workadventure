@@ -1,4 +1,4 @@
-import { AvailabilityStatus } from "@workadventure/messages";
+import { AvailabilityStatus } from "@workadventure/game-model";
 import { describe, expect, it } from "vitest";
 import { LOCAL_CAMERA_SMALL_SCREEN_WIDTH, shouldDisplayLocalCameraPeer } from "./StreamableCollectionRules";
 
