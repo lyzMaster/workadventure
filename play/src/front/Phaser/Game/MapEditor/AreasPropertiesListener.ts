@@ -78,7 +78,7 @@ import {
 } from "../../../Stores/GameStore";
 
 import type { MessageUserJoined } from "../../../Connection/ConnexionModels";
-import { navChat } from "../../../Chat/Stores/ChatStore";
+import { navChat } from "../../../Stores/NavChatStore";
 import type { Area } from "../../Entity/Area";
 import { extensionModuleStore } from "../../../Stores/GameSceneStore";
 import type { ChatRoom } from "../../../Chat/Connection/ChatConnection";
@@ -88,7 +88,7 @@ import { getMegaphoneSpaceFields } from "../../../Streaming/MegaphoneSpaceFields
 import PopupCowebsite from "../../../Components/PopUp/PopupCowebsite.svelte";
 import JitsiPopup from "../../../Components/PopUp/PopUpJitsi.svelte";
 import PopUpTab from "../../../Components/PopUp/PopUpTab.svelte";
-import { selectedRoomStore } from "../../../Chat/Stores/SelectRoomStore";
+import { selectedRoomStore } from "../../../Stores/SelectedRoomStore";
 import FilePopup from "../../../Components/PopUp/FilePopup.svelte";
 import { isInsidePersonalAreaStore } from "../../../Stores/PersonalDeskStore";
 import { currentPlayerLockableAreasStore, type LockableAreaEntry } from "../../../Stores/CurrentPlayerAreaLockStore";

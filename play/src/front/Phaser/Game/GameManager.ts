@@ -1,39 +1,32 @@
-import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
 import * as Sentry from "@sentry/svelte";
 import * as Phaser from "phaser";
 import { Deferred } from "@workadventure/shared-utils";
 import { TimeoutError } from "@workadventure/shared-utils/src/Abort/TimeoutError";
-import { connectionManager } from "../../Connection/ConnectionManager";
+import { connectionManager } from "../../Stores/StandaloneConnectionManager";
 import { localUserStore } from "../../Connection/LocalUserStore";
 import type { Room } from "../../Connection/Room";
 import { showHelpCameraSettings } from "../../Stores/HelpSettingsStore";
 import {
-    availabilityStatusStore,
     requestedCameraDeviceIdStore,
     requestedCameraState,
     requestedMicrophoneDeviceIdStore,
     requestedMicrophoneState,
 } from "../../Stores/MediaStore";
-import { menuIconVisiblilityStore, userIsConnected } from "../../Stores/MenuStore";
+import { menuIconVisiblilityStore } from "../../Stores/MenuStore";
 import { EnableCameraSceneName } from "../Login/EnableCameraScene";
 import { LoginSceneName } from "../Login/LoginScene";
 import { PwaInstallSceneName } from "../Login/PwaInstallScene";
 import { SelectCharacterSceneName } from "../Login/SelectCharacterScene";
 import { EmptySceneName } from "../Login/EmptyScene";
-import { gameSceneIsLoadedStore, waitForGameSceneStore } from "../../Stores/GameSceneStore";
+import { gameSceneIsLoadedStore } from "../../Stores/GameSceneStore";
 import { myCameraStore } from "../../Stores/MyMediaStore";
 import { SelectCompanionSceneName } from "../Login/SelectCompanionScene";
 import { errorScreenStore } from "../../Stores/ErrorScreenStore";
 import { pwaInstallProfileMenuEligibleStore, pwaInstallSceneVisibleStore } from "../../Stores/PwaInstallStore";
 import { hasCapability } from "../../Connection/Capabilities";
 import type { ChatConnectionInterface } from "../../Chat/Connection/ChatConnection";
-import { MATRIX_PUBLIC_URI } from "../../Enum/EnvironmentVariable";
-import { InvalidLoginTokenError, MatrixClientWrapper } from "../../Chat/Connection/Matrix/MatrixClientWrapper";
-import { MatrixChatConnection } from "../../Chat/Connection/Matrix/MatrixChatConnection";
 import { VoidChatConnection } from "../../Chat/Connection/VoidChatConnection";
-import { loginTokenErrorStore, isMatrixChatEnabledStore } from "../../Stores/ChatStore";
-import { initializeChatVisibilitySubscription } from "../../Chat/Stores/ChatStore";
 import { ABSOLUTE_PUSHER_URL } from "../../Enum/ComputedConst";
 import type { WokaData } from "../../Components/Woka/WokaTypes";
 import { generateRandomName } from "../../Utils/RandomNameGenerator";
@@ -58,15 +51,12 @@ export class GameManager {
     private visitCardUrl: string | null = null;
     private matrixServerUrl: string | undefined = undefined;
     private chatConnectionPromise: Promise<ChatConnectionInterface> | undefined;
-    private matrixClientWrapper: MatrixClientWrapper | undefined;
     private _chatConnection: ChatConnectionInterface | undefined;
-    private chatVisibilitySubscription: Unsubscriber | undefined;
 
     constructor() {
         this.playerName = localUserStore.getName();
         this.characterTextureIds = localUserStore.getCharacterTextures();
         this.companionTextureId = localUserStore.getCompanionTextureId();
-        this.chatVisibilitySubscription = initializeChatVisibilitySubscription();
     }
 
     public async init(scenePlugin: ScenePlugin): Promise<string> {
@@ -88,6 +78,9 @@ export class GameManager {
         }
         let nextScene = result.nextScene;
         this.startRoom = result.room;
+        if (!this.startRoom) {
+            throw new Error("Online room resolution is not available in standalone mode");
+        }
         this._startRoomPromise.resolve(result.room);
         this.loadMap(this.startRoom);
 
@@ -400,47 +393,9 @@ export class GameManager {
             return this.chatConnectionPromise;
         }
 
-        const matrixServerUrl = this.getMatrixServerUrl() ?? MATRIX_PUBLIC_URI;
-
-        if (matrixServerUrl && get(userIsConnected)) {
-            this.matrixClientWrapper = new MatrixClientWrapper(matrixServerUrl, localUserStore);
-
-            const matrixClientPromise = this.matrixClientWrapper.initMatrixClient();
-
-            matrixClientPromise.catch((e) => {
-                if (e instanceof InvalidLoginTokenError) {
-                    loginTokenErrorStore.set(true);
-                }
-            });
-
-            const matrixChatConnection = new MatrixChatConnection(matrixClientPromise, availabilityStatusStore);
-            this._chatConnection = matrixChatConnection;
-
-            this.chatConnectionPromise = matrixChatConnection.init().then(() => matrixChatConnection);
-            isMatrixChatEnabledStore.set(true);
-
-            try {
-                const gameScene = await waitForGameSceneStore();
-
-                if (gameScene.room.isChatEnabled) {
-                    return this.chatConnectionPromise;
-                }
-            } catch (e) {
-                console.error(e);
-                Sentry.captureException(e);
-            }
-
-            matrixChatConnection.destroy().catch((e) => {
-                console.error(e);
-                Sentry.captureException(e);
-            });
-            return new VoidChatConnection();
-        } else {
-            // No matrix connection? Let's fill the gap with a "void" object
-            this._chatConnection = new VoidChatConnection();
-            isMatrixChatEnabledStore.set(false);
-            return this._chatConnection;
-        }
+        this._chatConnection = new VoidChatConnection();
+        this.chatConnectionPromise = Promise.resolve(this._chatConnection);
+        return this.chatConnectionPromise;
     }
     get chatConnection(): ChatConnectionInterface {
         if (!this._chatConnection) {
@@ -458,9 +413,6 @@ export class GameManager {
             try {
                 this._chatConnection.clearListener();
                 await this._chatConnection.destroy();
-                if (this.chatVisibilitySubscription) {
-                    this.chatVisibilitySubscription();
-                }
                 this.clearChatDataFromLocalStorage();
                 this._chatConnection = undefined;
                 this.chatConnectionPromise = undefined;

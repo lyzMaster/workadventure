@@ -10,11 +10,6 @@ import { isIOS, isSafari } from "../WebRtc/DeviceUtils";
 import { SoundMeter } from "../Phaser/Components/SoundMeter";
 import type { RequestedStatus } from "../Rules/StatusRules/statusRules";
 import { statusChanger } from "../Components/ActionBar/AvailabilityStatus/statusChanger";
-import {
-    type BackgroundConfig,
-    type BackgroundTransformer,
-    createBackgroundTransformer,
-} from "../WebRtc/BackgroundProcessor/createBackgroundTransformer";
 import { LL } from "../../i18n/i18n-svelte";
 import { MediaStreamConstraintsError } from "./Errors/MediaStreamConstraintsError";
 import { BrowserTooOldError } from "./Errors/BrowserTooOldError";
@@ -47,12 +42,39 @@ import {
     type LocalStreamStoreValue,
     type LocalTrackStoreValue,
 } from "./LocalStreamTypes";
-import { NoiseSuppressionController } from "./NoiseSuppressionController";
 import { buildMicrophoneAudioConstraints } from "./MicrophoneSettings";
 import { audioPlaybackStore } from "./AudioPlaybackStore";
 import { browserNotificationStore } from "./BrowserNotificationStore";
 
 export const inBackgroundSettingsStore = writable<boolean>(false);
+
+type BackgroundConfig = {
+    mode: "none" | "blur" | "image" | "video";
+    blurAmount?: number;
+    backgroundImage?: string;
+    backgroundVideo?: string;
+};
+
+type BackgroundTransformer = {
+    transform(stream: MediaStream, signal?: AbortSignal): Promise<MediaStream>;
+    updateConfig?(config: BackgroundConfig): Promise<void>;
+    stop(): void;
+};
+
+function createBackgroundTransformer(_config: BackgroundConfig): BackgroundTransformer | undefined {
+    return undefined;
+}
+
+class NoiseSuppressionController {
+    public stop(): void {}
+
+    public transform(
+        track: MediaStreamTrack | undefined,
+        ..._unused: unknown[]
+    ): Promise<MediaStreamTrack | undefined> {
+        return Promise.resolve(track);
+    }
+}
 
 export type MediaAccessIssue = "permission_denied" | "no_device";
 

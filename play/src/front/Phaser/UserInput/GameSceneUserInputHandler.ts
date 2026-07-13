@@ -10,7 +10,7 @@ import { isActivatable } from "../Game/ActivatableInterface";
 import { mapManagerActivated } from "../../Stores/MenuStore";
 import { displayEmote, isEmoteIndex } from "../../Stores/EmoteStore";
 import { analyticsClient } from "../../Administration/AnalyticsClient";
-import { navChat } from "../../Chat/Stores/ChatStore";
+import { navChat } from "../../Stores/NavChatStore";
 import { chatVisibilityStore } from "../../Stores/ChatStore";
 import { popupStore } from "../../Stores/PopupStore";
 import SayPopUp from "../../Components/PopUp/SayPopUp.svelte";

@@ -35,10 +35,14 @@ import { wamFileMigration } from "@workadventure/map-editor/src/Migrations/WamFi
 import Debug from "debug";
 import { asError } from "catch-unknown";
 import { userMessageManager } from "../../Administration/UserMessageManager";
-import { connectionManager } from "../../Connection/ConnectionManager";
+import { connectionManager } from "../../Stores/StandaloneConnectionManager";
 import { urlManager } from "../../Url/UrlManager";
-import { mediaManager } from "../../WebRtc/MediaManager";
-import { iceServersManager } from "../../WebRtc/IceServersManager";
+import {
+    audioContextManager,
+    checkCoturnServer,
+    iceServersManager,
+    mediaManager,
+} from "../../Stores/StandaloneMediaRuntime";
 import { UserInputManager } from "../UserInput/UserInputManager";
 import { touchScreenManager } from "../../Touch/TouchScreenManager";
 import { PinchManager } from "../UserInput/PinchManager";
@@ -151,7 +155,6 @@ import { mapDeletedPromptStore } from "../../Stores/MapDeletedPromptStore";
 import { SpaceRegistry } from "../../Space/SpaceRegistry/SpaceRegistry";
 import { SpaceScriptingBridgeService } from "../../Space/Utils/SpaceScriptingBridgeService";
 import { debugAddPlayer, debugRemovePlayer, debugUpdatePlayer, debugZoom } from "../../Utils/Debuggers";
-import { checkCoturnServer } from "../../Components/Video/utils";
 import { BroadcastService } from "../../Streaming/BroadcastService";
 import { megaphoneCanBeUsedStore, megaphoneSpaceSettingsStore, megaphoneSpaceStore } from "../../Stores/MegaphoneStore";
 import { CompanionTextureError } from "../../Exception/CompanionTextureError";
@@ -159,16 +162,15 @@ import { SelectCompanionScene, SelectCompanionSceneName } from "../Login/SelectC
 import { scriptUtils } from "../../Api/ScriptUtils";
 import { statusChanger } from "../../Components/ActionBar/AvailabilityStatus/statusChanger";
 import { warningMessageStore } from "../../Stores/ErrorStore";
-import { closeCoWebsite, getCoWebSite, openCoWebSite, openCoWebSiteWithoutSource } from "../../Chat/Utils";
-import { navChat } from "../../Chat/Stores/ChatStore";
-import { ProximityChatRoom } from "../../Chat/Connection/Proximity/ProximityChatRoom";
+import { closeCoWebsite, getCoWebSite, openCoWebSite, openCoWebSiteWithoutSource } from "../../Stores/CoWebsiteUtils";
+import { navChat } from "../../Stores/NavChatStore";
 import {
     DEFAULT_PROXIMITY_SPACE_NAME,
+    ProximityChatRoom,
     ProximityChatRoomManager,
+    ProximitySpaceManager,
     type ProximityChatRoomKind,
-} from "../../Chat/Connection/Proximity/ProximityChatRoomManager";
-import { ProximitySpaceManager } from "../../WebRtc/ProximitySpaceManager";
-import { audioContextManager } from "../../WebRtc/AudioContextManager";
+} from "../../Stores/StandaloneProximityChat";
 import { noMicrophoneSoundWarningVisibleStore } from "../../Stores/NoMicrophoneSoundWarningVisibleStore";
 import type { SpaceRegistryInterface } from "../../Space/SpaceRegistry/SpaceRegistryInterface";
 import { WorldUserProvider } from "../../Chat/UserProvider/WorldUserProvider";
@@ -193,7 +195,7 @@ import { enableUserInputsStore } from "../../Stores/UserInputStore";
 import { ScriptLoadedError } from "../../Api/ScriptLoadedError";
 import { screenShareStreamStore, videoStreamStore } from "../../Stores/PeerStore";
 import type { ChatConnectionInterface, ChatUser } from "../../Chat/Connection/ChatConnection";
-import { selectedRoomStore } from "../../Chat/Stores/SelectRoomStore";
+import { selectedRoomStore } from "../../Stores/SelectedRoomStore";
 import { raceTimeout } from "../../Utils/PromiseUtils";
 import { PLAYTEXT_NEW_MEDIA_DEVICE_PREFIX } from "../Entity/Character";
 import { type Avatar, ConversationBubble } from "../Entity/ConversationBubble";
