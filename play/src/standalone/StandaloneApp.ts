@@ -96,12 +96,12 @@ export class StandaloneApp {
             });
         }
         if (import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_BRIDGE === "true") {
-            void import("./runtime/AgentDebugBridge").then(({ installAgentDebugBridge }) => {
-                if (this.scene !== scene) {
+            void import("./runtime/WorldCommandDebugBridge").then(({ installWorldCommandDebugBridge }) => {
+                if (this.scene !== scene || !this.sceneController) {
                     return;
                 }
                 this.devAgentBridge?.destroy();
-                this.devAgentBridge = installAgentDebugBridge(scene);
+                this.devAgentBridge = installWorldCommandDebugBridge(this.sceneController.getWorldCommandGateway());
             });
         }
         return scene;

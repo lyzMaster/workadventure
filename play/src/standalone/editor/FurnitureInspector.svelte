@@ -17,16 +17,22 @@
 {#if selectedPrefab && selectedVariant}
     <div class="flex flex-col gap-4">
         <h2 class="m-0 text-xl">{selectedPrefab.name}</h2>
-        <p class="m-0 opacity-70" data-testid="standalone-selected-entity-id">Entity: {selectedEntityId}</p>
-        <p class="m-0 opacity-70">拖动家具可改变位置；Delete/Backspace 可删除。</p>
+        {#if selectedEntityId}
+            <p class="m-0 opacity-70" data-testid="standalone-selected-entity-id">Entity: {selectedEntityId}</p>
+            <p class="m-0 opacity-70">拖动家具可改变位置；Delete/Backspace 可删除。</p>
+        {:else}
+            <p class="m-0 opacity-70">当前修改的是待放置家具，点击画布后将使用这里选中的变体。</p>
+        {/if}
         <FurnitureVariantPicker
             {selectedPrefab}
             variant={selectedVariant}
-            onPickItem={(prefab) => controller.updateSelectedPrefab(prefab)}
+            onPickItem={(prefab) => controller.applyPrefabSelection(prefab)}
         />
-        <button class="danger" data-testid="standalone-delete-entity" onclick={() => void controller.deleteSelected()}
-            >删除家具</button
-        >
+        {#if selectedEntityId}
+            <button class="danger" data-testid="standalone-delete-entity" onclick={() => void controller.deleteSelected()}
+                >删除家具</button
+            >
+        {/if}
     </div>
 {:else}
     <div class="flex flex-col gap-2">

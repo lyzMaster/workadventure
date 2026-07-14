@@ -6,10 +6,8 @@ import {
     type WAMEntityData,
     type WAMFileFormat,
 } from "@workadventure/map-editor";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { RoomConnection } from "../../../src/front/Connection/RoomConnection";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { FrontCommandInterface } from "../../../src/front/Phaser/Game/MapEditor/Commands/FrontCommandInterface";
-import { OnlineMapEditTransport } from "../../../src/front/Phaser/Game/MapEditor/OnlineMapEditTransport";
 import { LocalMapEditTransport } from "../../../src/standalone/LocalMapEditTransport";
 import type { SceneOverlay } from "../../../src/standalone/SceneOverlay";
 import type { SceneStorage } from "../../../src/standalone/SceneStorage";
@@ -45,7 +43,16 @@ class TestCreateCommand extends CreateEntityCommand implements FrontCommandInter
     public getUndoCommand(): TestDeleteCommand {
         return new TestDeleteCommand(this.wamFile, this.entityId);
     }
-    public emitEvent = vi.fn();
+    public toDto(sceneId: string) {
+        return {
+            type: "entity.create" as const,
+            commandId: this.commandId,
+            sceneId,
+            entityId: this.entityId,
+            entity: chair,
+            dimensions: { width: 32, height: 32 },
+        };
+    }
 }
 
 class TestDeleteCommand extends DeleteEntityCommand implements FrontCommandInterface {
@@ -53,14 +60,32 @@ class TestDeleteCommand extends DeleteEntityCommand implements FrontCommandInter
         if (!this.entityConfig) throw new Error("Delete command has not executed");
         return new TestCreateCommand(this.wamFile, this.entityId, this.entityConfig);
     }
-    public emitEvent = vi.fn();
+    public toDto(sceneId: string) {
+        return {
+            type: "entity.delete" as const,
+            commandId: this.commandId,
+            sceneId,
+            entityId: this.entityId,
+            entity: this.entityConfig,
+            dimensions: { width: 32, height: 32 },
+        };
+    }
 }
 
 class TestUpdateCommand extends UpdateEntityCommand implements FrontCommandInterface {
     public getUndoCommand(): TestUpdateCommand {
         return new TestUpdateCommand(this.wamFile, this.entityId, this.oldConfig, undefined, this.newConfig);
     }
-    public emitEvent = vi.fn();
+    public toDto(sceneId: string) {
+        return {
+            type: "entity.update" as const,
+            commandId: this.commandId,
+            sceneId,
+            entityId: this.entityId,
+            patch: this.newConfig,
+            dimensions: { width: 32, height: 32 },
+        };
+    }
 }
 
 function createWam(): WamFile {
@@ -152,17 +177,5 @@ describe("LocalMapEditTransport", () => {
 
         expect(storage.overlay?.sceneId).toBe("home");
         expect(storage.overlay?.entities.chair).toEqual(chair);
-    });
-});
-
-describe("OnlineMapEditTransport", () => {
-    it("keeps the original FrontCommand.emitEvent(RoomConnection) behavior", async () => {
-        const connection = {} as RoomConnection;
-        const command = new TestCreateCommand(createWam(), "chair", chair);
-        const transport = new OnlineMapEditTransport(() => connection);
-
-        await expect(transport.submit(command)).resolves.toEqual({ ok: true, commandId: command.commandId });
-        expect(command.emitEvent).toHaveBeenCalledOnce();
-        expect(command.emitEvent).toHaveBeenCalledWith(connection);
     });
 });

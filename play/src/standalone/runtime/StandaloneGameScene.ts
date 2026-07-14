@@ -46,6 +46,9 @@ import { AgentCharacterController } from "../characters/AgentCharacterController
 import { PhaserAgentCharacterTextureLoader } from "../characters/AgentCharacterTextureLoader";
 import type { StandaloneCharacter } from "../characters/StandaloneCharacter";
 import type { CollisionGridProvider } from "../pathfinding/CollisionGridProvider";
+import { FurnitureRuntimeController } from "../furniture/FurnitureRuntimeController";
+import { StandaloneAgentCommandAdapter } from "../commands/StandaloneAgentCommandAdapter";
+import type { WorldSceneRuntime } from "../commands/types";
 
 type Position = { x: number; y: number };
 type Tilemap = Phaser.Tilemaps.Tilemap;
@@ -83,8 +86,10 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
     public Terrains: Tileset[] = [];
     public userInputManager!: UserInputManager;
     public usernameLayer!: CharacterNameLayer;
-    public agentCharacterRepository!: AgentCharacterRepository;
-    public agentCharacterController!: AgentCharacterController;
+    private agentCharacterRepository!: AgentCharacterRepository;
+    private agentCharacterController!: AgentCharacterController;
+    private furnitureRuntimeController!: FurnitureRuntimeController;
+    private worldSceneRuntime!: WorldSceneRuntime;
 
     private readonly sceneReadyToStartDeferred = new Deferred<void>();
     public readonly sceneReadyToStartPromise = this.sceneReadyToStartDeferred.promise;
@@ -163,6 +168,14 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
                 textureLoader: new PhaserAgentCharacterTextureLoader(this),
                 createMapCollisionForCharacter: (character) => this.createMapCollisionForCharacter(character),
             });
+            this.furnitureRuntimeController = new FurnitureRuntimeController(this);
+            this.worldSceneRuntime = {
+                sceneId: this.sceneId,
+                agentCommands: new StandaloneAgentCommandAdapter(this.agentCharacterController),
+                furnitureCommands: this.furnitureRuntimeController,
+                historyCommands: this.furnitureRuntimeController,
+                flush: () => this.flushPersistence(),
+            };
             this.userInputManager = new UserInputManager(this, new StandaloneUserInputHandler(this));
             this.cameraManager = new CameraManager(
                 this,
@@ -239,6 +252,10 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
 
     public getAgentController(): AgentCharacterController {
         return this.agentCharacterController;
+    }
+
+    public getWorldSceneRuntime(): WorldSceneRuntime {
+        return this.worldSceneRuntime;
     }
 
     public getEntityById(entityId: string): Entity | undefined {

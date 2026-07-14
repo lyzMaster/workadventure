@@ -63,6 +63,7 @@ function createDeferred(): { promise: Promise<void>; resolve: () => void } {
 function createScene(flush: () => Promise<void>): GameScene {
     return {
         getMapEditorModeManager: () => ({ flush }),
+        flushPersistence: flush,
     } as unknown as GameScene;
 }
 

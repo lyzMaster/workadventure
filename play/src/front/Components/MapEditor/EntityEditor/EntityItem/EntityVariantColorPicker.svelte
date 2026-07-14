@@ -8,7 +8,7 @@
     let { colors, selectedColor, onColorChange }: Props = $props();
 </script>
 
-{#if colors.length > 1}
+{#if colors.length > 0}
     <p class="m-0 text-xxs">Colors</p>
     <div class="flex flex-row gap-2">
         {#each colors as color (color)}

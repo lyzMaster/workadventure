@@ -1,0 +1,20 @@
+{
+  "name": "@workadventure/world-command",
+  "version": "1.0.0",
+  "description": "Standalone world command protocol",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@workadventure/game-model": "1.0.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "files": [
+    "src"
+  ]
+}

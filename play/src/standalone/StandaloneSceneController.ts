@@ -14,6 +14,16 @@ import { getStandaloneSceneDefinitions, resolveStandaloneSceneDefinition } from 
 import type { StandaloneSceneDefinition, StandaloneSceneId } from "./StandaloneSceneDefinition";
 import { StaticCharacterAssetCatalog } from "./StaticCharacterAssetCatalog";
 import type { StandaloneGameScene } from "./runtime/StandaloneGameScene";
+import {
+    DefaultWorldCommandGateway,
+    type WorldCommandGateway,
+} from "./commands/WorldCommandGateway";
+import type {
+    ActiveSceneRuntimeProvider,
+    SceneRuntimeSnapshot,
+    WorldSceneRuntime,
+    WorldSceneStateSnapshot,
+} from "./commands/types";
 
 export interface StandaloneSceneController {
     load(sceneId: StandaloneSceneId): Promise<void>;
@@ -31,9 +41,10 @@ export interface StandaloneSceneControllerState {
     error: string | null;
 }
 
-export class DefaultStandaloneSceneController implements StandaloneSceneController {
+export class DefaultStandaloneSceneController implements StandaloneSceneController, ActiveSceneRuntimeProvider {
     private activeSceneId: StandaloneSceneId | null = null;
     private transitionQueue: Promise<void> = Promise.resolve();
+    private readonly worldCommandGateway: DefaultWorldCommandGateway;
     private state = writable<StandaloneSceneControllerState>({
         activeSceneId: null,
         activeDefinition: null,
@@ -50,7 +61,9 @@ export class DefaultStandaloneSceneController implements StandaloneSceneControll
         private readonly storage: SceneStorage = new IndexedDBSceneStorage(),
         private readonly location: Location = window.location,
         private readonly localStorage: Storage = window.localStorage,
-    ) {}
+    ) {
+        this.worldCommandGateway = new DefaultWorldCommandGateway(this);
+    }
 
     public getState(): Readable<StandaloneSceneControllerState> {
         return this.state;
@@ -58,6 +71,10 @@ export class DefaultStandaloneSceneController implements StandaloneSceneControll
 
     public getSceneDefinitions(): StandaloneSceneDefinition[] {
         return getStandaloneSceneDefinitions();
+    }
+
+    public getWorldCommandGateway(): WorldCommandGateway {
+        return this.worldCommandGateway;
     }
 
     public start(): Promise<void> {
@@ -98,6 +115,52 @@ export class DefaultStandaloneSceneController implements StandaloneSceneControll
 
     public getActiveSceneId(): StandaloneSceneId | null {
         return this.activeSceneId;
+    }
+
+    public getActiveRuntime(): WorldSceneRuntime | null {
+        return this.getSnapshot().scene?.getWorldSceneRuntime() ?? null;
+    }
+
+    public switchScene(sceneId: StandaloneSceneId): Promise<void> {
+        return this.switchTo(sceneId);
+    }
+
+    public subscribe(listener: (snapshot: SceneRuntimeSnapshot) => void): () => void {
+        return this.state.subscribe((state) => {
+            listener({
+                activeSceneId: state.activeSceneId,
+                hasRuntime: Boolean(state.scene),
+                loading: state.loading,
+            });
+        });
+    }
+
+    public getSceneStateSnapshot(): WorldSceneStateSnapshot {
+        const snapshot = this.getSnapshot();
+        const runtime = snapshot.scene?.getWorldSceneRuntime();
+        const agents = runtime?.agentCommands.list();
+        const furniture = runtime?.furnitureCommands.list() ?? [];
+        const history = runtime?.furnitureCommands.getHistoryState() ?? { canUndo: false, canRedo: false };
+        return {
+            activeSceneId: snapshot.activeSceneId,
+            loading: snapshot.loading,
+            availableScenes: this.getSceneDefinitions().map((definition) => ({
+                sceneId: definition.sceneId,
+                displayName: definition.displayName,
+            })),
+            player: snapshot.scene?.CurrentPlayer?.getSnapshot() ?? null,
+            agents: agents?.ok ? agents.value : [],
+            furniture: {
+                count: furniture.length,
+                entities: furniture,
+                canUndo: history.canUndo,
+                canRedo: history.canRedo,
+            },
+        };
+    }
+
+    public isTransitionInProgress(): boolean {
+        return this.getSnapshot().loading;
     }
 
     private enqueueTransition(operation: () => Promise<void>): Promise<void> {

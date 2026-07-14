@@ -10,7 +10,7 @@
     let { entityPrefabsPositions, selectedEntity, onPickItem }: Props = $props();
 </script>
 
-{#if entityPrefabsPositions.length > 1}
+{#if entityPrefabsPositions.length > 0}
     <p class="m-0 text-xxs">Positions</p>
     <div class="flex flex-row gap-2">
         {#each entityPrefabsPositions as item (item.id)}

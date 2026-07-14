@@ -23,6 +23,10 @@ export interface AgentMoveToOptions extends CharacterPathfindingOptions {
     speed?: number;
 }
 
+export interface AgentSpawnOptions {
+    signal?: AbortSignal;
+}
+
 export interface AgentCharacterControllerOptions {
     host: CharacterRuntimeHost;
     repository: AgentCharacterRepository;
@@ -55,6 +59,7 @@ export class AgentCharacterController {
         textureKeysPromise: Promise<string[]>,
     ) => AgentCharacter;
     private destroyed = false;
+    private readonly pendingSpawns = new Set<CharacterId>();
 
     public constructor(options: AgentCharacterControllerOptions) {
         this.host = options.host;
@@ -77,29 +82,54 @@ export class AgentCharacterController {
                 }));
     }
 
-    public async spawn(definition: AgentCharacterDefinition): Promise<AgentActionResult<AgentCharacterSnapshot>> {
+    public async spawn(
+        definition: AgentCharacterDefinition,
+        options: AgentSpawnOptions = {},
+    ): Promise<AgentActionResult<AgentCharacterSnapshot>> {
         const actionId = this.createActionId();
         const preflight = this.validateSpawnDefinition(actionId, definition);
         if (preflight) {
             return preflight;
         }
+        if (options.signal?.aborted) {
+            return this.fail(actionId, "cancelled", "Agent spawn was cancelled");
+        }
 
         let character: AgentCharacter | undefined;
+        const abortSpawn = (): void => {
+            character?.destroy();
+        };
+        this.pendingSpawns.add(definition.characterId);
+        options.signal?.addEventListener("abort", abortSpawn, { once: true });
         try {
             const textureKeysPromise = this.textureLoader.load(definition.appearance);
             character = this.createAgentCharacter(this.host, definition, textureKeysPromise);
             this.createMapCollisionForCharacter(character);
+            if (options.signal?.aborted) {
+                character.destroy();
+                return this.fail(actionId, "cancelled", "Agent spawn was cancelled");
+            }
             await character.ready();
+            if (options.signal?.aborted) {
+                character.destroy();
+                return this.fail(actionId, "cancelled", "Agent spawn was cancelled");
+            }
             this.repository.add(character);
             this.host.markDirty();
             return this.ok(actionId, character.getAgentSnapshot());
         } catch (error) {
             character?.destroy();
+            if (options.signal?.aborted) {
+                return this.fail(actionId, "cancelled", "Agent spawn was cancelled");
+            }
             return this.fail(
                 actionId,
                 this.mapSpawnErrorCode(error),
                 error instanceof Error ? error.message : String(error),
             );
+        } finally {
+            options.signal?.removeEventListener("abort", abortSpawn);
+            this.pendingSpawns.delete(definition.characterId);
         }
     }
 
@@ -251,7 +281,7 @@ export class AgentCharacterController {
         if (!definition.characterId.trim()) {
             return this.fail(actionId, "invalid_target", "Agent characterId must be non-empty");
         }
-        if (this.repository.has(definition.characterId)) {
+        if (this.repository.has(definition.characterId) || this.pendingSpawns.has(definition.characterId)) {
             return this.fail(actionId, "character_already_exists", `Agent "${definition.characterId}" already exists`);
         }
         if (!this.isPositionWithinMap(definition.spawnPosition)) {

@@ -65,23 +65,43 @@ export class FurnitureEditorController {
         this.syncFromRuntime();
     }
 
+    public async applyPrefabSelection(prefab: EntityPrefab): Promise<void> {
+        const entityId = this.scene?.getStandaloneEntityEditorSnapshot()?.selectedEntityId;
+        if (entityId) {
+            await this.updateSelectedPrefab(prefab);
+            return;
+        }
+        this.pickPrefab(prefab);
+    }
+
     public async deleteSelected(): Promise<void> {
-        await this.scene?.deleteSelectedFurniture();
+        const entityId = this.scene?.getStandaloneEntityEditorSnapshot()?.selectedEntityId;
+        if (!this.scene || !entityId) {
+            return;
+        }
+        await this.scene.getWorldSceneRuntime().furnitureCommands.remove(entityId);
         this.syncFromRuntime();
     }
 
     public async updateSelectedPrefab(prefab: EntityPrefab): Promise<void> {
-        await this.scene?.updateSelectedFurniturePrefab(prefab);
+        const entityId = this.scene?.getStandaloneEntityEditorSnapshot()?.selectedEntityId;
+        if (!this.scene || !entityId) {
+            return;
+        }
+        await this.scene.getWorldSceneRuntime().furnitureCommands.setVariant(entityId, {
+            collectionName: prefab.collectionName,
+            prefabId: prefab.id,
+        });
         this.syncFromRuntime();
     }
 
     public async undo(): Promise<void> {
-        await this.scene?.getMapEditorModeManager().undoCommand();
+        await this.scene?.getWorldSceneRuntime().historyCommands.undo();
         this.syncFromRuntime();
     }
 
     public async redo(): Promise<void> {
-        await this.scene?.getMapEditorModeManager().redoCommand();
+        await this.scene?.getWorldSceneRuntime().historyCommands.redo();
         this.syncFromRuntime();
     }
 

@@ -1,21 +1,9 @@
 import * as Phaser from "phaser";
-import { v4 as uuidv4 } from "uuid";
-import type {
-    AgentActionErrorCode,
-    AgentActionResult,
-    AgentCharacterDefinition,
-    AgentCharacterSnapshot,
-    CharacterId,
-    CharacterSayType,
-    Direction,
-} from "@workadventure/game-model";
-import type { EntityPrefab, WAMEntityData } from "@workadventure/map-editor";
-import { CreateEntityFrontCommand } from "../../front/Phaser/Game/MapEditor/Commands/Entity/CreateEntityFrontCommand";
-import { DeleteEntityFrontCommand } from "../../front/Phaser/Game/MapEditor/Commands/Entity/DeleteEntityFrontCommand";
-import { UpdateEntityFrontCommand } from "../../front/Phaser/Game/MapEditor/Commands/Entity/UpdateEntityFrontCommand";
-import { mapEditorEntityModeStore, mapEditorSelectedEntityIdStore } from "../../front/Stores/MapEditorEntityEditorStore";
+import type { CharacterSayType, Direction } from "@workadventure/game-model";
+import type { WorldCommand, WorldCommandResult, WorldEvent } from "@workadventure/world-command";
 import type { Game } from "../../front/Phaser/Game/Game";
 import type { DefaultStandaloneSceneController } from "../StandaloneSceneController";
+import type { FurnitureEntitySnapshot, FurniturePrefabSnapshot } from "../commands/types";
 import type { StandaloneSceneId } from "../StandaloneSceneDefinition";
 import type { StandaloneGameScene } from "./StandaloneGameScene";
 
@@ -24,73 +12,70 @@ type NetworkAuditEntry = {
     url: string;
 };
 
-type TestEntitySnapshot = {
-    id: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    prefabId: string;
-    collectionName: string;
-    name: string;
-    color: string;
-    direction: string;
-};
-
-type TestPrefabSnapshot = {
-    prefabId: string;
-    collectionName: string;
-    name: string;
-    hasCollisionGrid: boolean;
-};
-
 type TestBridgeApi = {
-    getSceneState(): {
+    getSceneState(): Promise<{
         sceneId: StandaloneSceneId;
         activeSceneId: string | null;
         editor: ReturnType<StandaloneGameScene["getStandaloneEntityEditorSnapshot"]>;
         network: NetworkAuditEntry[];
-    };
+        world: unknown;
+    }>;
     getPlayerState(): {
         x: number;
         y: number;
         direction: string;
         moving: boolean;
     };
-    getEntities(): TestEntitySnapshot[];
-    listFurniturePrefabs(): TestPrefabSnapshot[];
+    getEntities(): Promise<
+        Array<{
+            id: string;
+            x: number;
+            y: number;
+            width: number;
+            height: number;
+            prefabId: string;
+            collectionName: string;
+            name: string;
+            color: string;
+            direction: string;
+        }>
+    >;
+    listFurniturePrefabs(): Promise<FurniturePrefabSnapshot[]>;
     movePlayer(target: { x: number; y: number }): Promise<{ x: number; y: number; cancelled: boolean }>;
-    spawnAgent(definition: AgentCharacterDefinition): Promise<AgentActionResult<AgentCharacterSnapshot>>;
-    listAgents(): AgentActionResult<AgentCharacterSnapshot[]>;
-    getAgentState(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
+    executeWorldCommand(command: unknown, options?: { timeoutMs?: number }): Promise<WorldCommandResult>;
+    cancelWorldCommand(commandId: string): boolean;
+    getWorldEvents(): WorldEvent[];
+    listActiveCommands(): unknown[];
+    spawnAgent(input: {
+        characterId: string;
+        name: string;
+        sceneId: StandaloneSceneId;
+        appearance: unknown;
+        spawnPosition: { x: number; y: number; direction: Direction; moving: boolean };
+    }): Promise<WorldCommandResult>;
+    listAgents(): Promise<WorldCommandResult>;
+    getAgentState(input: { characterId: string }): Promise<WorldCommandResult>;
     moveAgent(input: {
-        characterId: CharacterId;
+        characterId: string;
         target: { x: number; y: number };
         options?: { tryFindingNearestAvailable?: boolean; timeoutMs?: number; maxCalculations?: number; speed?: number };
-    }): Promise<AgentActionResult<AgentCharacterSnapshot>>;
-    stopAgent(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
-    faceAgent(input: { characterId: CharacterId; direction: Direction }): AgentActionResult<AgentCharacterSnapshot>;
-    speakAgent(input: {
-        characterId: CharacterId;
-        text: string;
-        type?: CharacterSayType;
-    }): AgentActionResult<AgentCharacterSnapshot>;
-    clearAgentSpeech(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
-    removeAgent(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
+    }): Promise<WorldCommandResult>;
+    stopAgent(input: { characterId: string }): Promise<WorldCommandResult>;
+    faceAgent(input: { characterId: string; direction: Direction }): Promise<WorldCommandResult>;
+    speakAgent(input: { characterId: string; text: string; type?: CharacterSayType }): Promise<WorldCommandResult>;
+    clearAgentSpeech(input: { characterId: string }): Promise<WorldCommandResult>;
+    removeAgent(input: { characterId: string }): Promise<WorldCommandResult>;
     openFurnitureEditor(): Promise<void>;
     closeFurnitureEditor(): Promise<void>;
     selectFurniture(input: { collectionName: string; prefabId: string }): Promise<{ prefabId: string }>;
-    placeFurniture(input: { x: number; y: number }): Promise<{ entityId: string }>;
+    placeFurniture(input: { x: number; y: number; entityId?: string }): Promise<WorldCommandResult>;
     selectEntity(input: { entityId: string }): Promise<{ entityId: string }>;
-    moveEntity(input: { entityId: string; x: number; y: number }): Promise<{ entityId: string; x: number; y: number }>;
-    changeEntityVariant(input: { entityId: string; collectionName: string; prefabId: string }): Promise<{
-        entityId: string;
-        prefabId: string;
-    }>;
-    deleteEntity(input: { entityId: string }): Promise<void>;
-    undo(): Promise<void>;
-    redo(): Promise<void>;
-    flushPersistence(): Promise<void>;
+    moveEntity(input: { entityId: string; x: number; y: number }): Promise<WorldCommandResult>;
+    changeEntityVariant(input: { entityId: string; collectionName: string; prefabId: string }): Promise<WorldCommandResult>;
+    deleteEntity(input: { entityId: string }): Promise<WorldCommandResult>;
+    undo(): Promise<WorldCommandResult>;
+    redo(): Promise<WorldCommandResult>;
+    flushPersistence(): Promise<WorldCommandResult>;
     clearOverlay(): Promise<void>;
 };
 
@@ -101,6 +86,10 @@ declare global {
 }
 
 let networkBridgeInstalled = false;
+const worldEventsBuffer: WorldEvent[] = [];
+const MAX_WORLD_EVENT_BUFFER = 500;
+let subscribedWorldEventGateway: unknown;
+let unsubscribeWorldEventGateway: (() => void) | undefined;
 
 export function installStandaloneTestBridge(
     game: Game,
@@ -109,13 +98,24 @@ export function installStandaloneTestBridge(
     controller: DefaultStandaloneSceneController,
 ): { destroy(): void } {
     installNetworkAuditBridge();
+    const gateway = controller.getWorldCommandGateway();
+    ensureWorldEventSubscription(gateway);
+
+    const executeWorldCommand = (command: WorldCommand | unknown, options?: { timeoutMs?: number }) =>
+        gateway.execute(command, options);
 
     const bridge: TestBridgeApi = {
-        getSceneState: () => ({
+        getSceneState: async () => ({
             sceneId,
             activeSceneId: controller.getActiveSceneId(),
             editor: scene.getStandaloneEntityEditorSnapshot(),
             network: readNetworkAudit(),
+            world: await executeWorldCommand({
+                schemaVersion: 1,
+                commandId: `test-scene-state-${Date.now()}`,
+                type: "scene.getState",
+                payload: {},
+            }),
         }),
         getPlayerState: () => ({
             x: scene.CurrentPlayer?.x ?? 0,
@@ -126,8 +126,25 @@ export function installStandaloneTestBridge(
                     ? scene.CurrentPlayer.body.speed > 0
                     : false,
         }),
-        getEntities: () => listEntities(scene),
-        listFurniturePrefabs: () => listFurniturePrefabs(scene),
+        getEntities: async () => {
+            const result = await executeWorldCommand(command("furniture.list", {}));
+            return ((result.data ?? []) as FurnitureEntitySnapshot[]).map((entity) => ({
+                id: entity.id,
+                x: entity.x,
+                y: entity.y,
+                width: entity.width,
+                height: entity.height,
+                prefabId: entity.prefab.prefabId,
+                collectionName: entity.prefab.collectionName,
+                name: entity.prefab.name,
+                color: entity.prefab.color,
+                direction: entity.prefab.direction,
+            }));
+        },
+        listFurniturePrefabs: async () => {
+            const result = await executeWorldCommand(command("furniture.listCatalog", {}));
+            return (result.data ?? []) as FurniturePrefabSnapshot[];
+        },
         movePlayer: async ({ x, y }) => {
             const result = await scene.moveTo({ x, y }, false);
             if (!result.ok) {
@@ -139,42 +156,24 @@ export function installStandaloneTestBridge(
                 cancelled: false,
             };
         },
-        spawnAgent: async (definition) => {
-            const agentController = safeGetAgentController(scene);
-            return toJson(agentController ? await agentController.spawn(definition) : agentBridgeFailure("scene_not_loaded"));
-        },
-        listAgents: () => {
-            const agentController = safeGetAgentController(scene);
-            return toJson(agentController ? agentController.list() : agentBridgeFailure("scene_not_loaded"));
-        },
-        getAgentState: ({ characterId }) => {
-            const agentController = safeGetAgentController(scene);
-            return toJson(agentController ? agentController.getState(characterId) : agentBridgeFailure("scene_not_loaded"));
-        },
-        moveAgent: async ({ characterId, target, options }) => {
-            const agentController = safeGetAgentController(scene);
-            return toJson(agentController ? await agentController.moveTo(characterId, target, options) : agentBridgeFailure("scene_not_loaded"));
-        },
-        stopAgent: ({ characterId }) => {
-            const agentController = safeGetAgentController(scene);
-            return toJson(agentController ? agentController.stop(characterId) : agentBridgeFailure("scene_not_loaded"));
-        },
-        faceAgent: ({ characterId, direction }) => {
-            const agentController = safeGetAgentController(scene);
-            return toJson(agentController ? agentController.face(characterId, direction) : agentBridgeFailure("scene_not_loaded"));
-        },
-        speakAgent: ({ characterId, text, type }) => {
-            const agentController = safeGetAgentController(scene);
-            return toJson(agentController ? agentController.speak(characterId, text, type) : agentBridgeFailure("scene_not_loaded"));
-        },
-        clearAgentSpeech: ({ characterId }) => {
-            const agentController = safeGetAgentController(scene);
-            return toJson(agentController ? agentController.clearSpeech(characterId) : agentBridgeFailure("scene_not_loaded"));
-        },
-        removeAgent: ({ characterId }) => {
-            const agentController = safeGetAgentController(scene);
-            return toJson(agentController ? agentController.remove(characterId) : agentBridgeFailure("scene_not_loaded"));
-        },
+        executeWorldCommand,
+        cancelWorldCommand: (commandId) => gateway.cancel(commandId),
+        getWorldEvents: () => toJson(worldEventsBuffer),
+        listActiveCommands: () => toJson(gateway.listActiveCommands()),
+        spawnAgent: (input) =>
+            executeWorldCommand(
+                command("agent.spawn", input, {
+                    sceneId: input.sceneId,
+                }),
+            ),
+        listAgents: () => executeWorldCommand(command("agent.list", {})),
+        getAgentState: (input) => executeWorldCommand(command("agent.getState", input)),
+        moveAgent: (input) => executeWorldCommand(command("agent.moveTo", input)),
+        stopAgent: (input) => executeWorldCommand(command("agent.stop", input)),
+        faceAgent: (input) => executeWorldCommand(command("agent.face", input)),
+        speakAgent: (input) => executeWorldCommand(command("agent.speak", input)),
+        clearAgentSpeech: (input) => executeWorldCommand(command("agent.clearSpeech", input)),
+        removeAgent: (input) => executeWorldCommand(command("agent.remove", input)),
         openFurnitureEditor: async () => {
             scene.openFurnitureEditor();
         },
@@ -182,99 +181,46 @@ export function installStandaloneTestBridge(
             scene.closeFurnitureEditor();
         },
         selectFurniture: async ({ collectionName, prefabId }) => {
-            const prefab = await getPrefab(scene, collectionName, prefabId);
-            scene.beginFurniturePlacement(prefab);
-            return { prefabId: prefab.id };
-        },
-        placeFurniture: async ({ x, y }) => {
-            const prefab = scene.getPendingFurniturePrefab();
-            if (!prefab) {
-                throw new Error("No furniture prefab selected");
-            }
-            const { width, height } = await ensurePrefabDimensions(scene, prefab);
-            const entityId = uuidv4();
-            const entityData: WAMEntityData = {
-                x: Math.floor(x - width * 0.5),
-                y: Math.floor(y - height * 0.5),
-                prefabRef: { collectionName: prefab.collectionName, id: prefab.id },
-                properties: [],
-            };
-            await scene.getMapEditorModeManager().executeCommand(
-                new CreateEntityFrontCommand(
-                    scene.getGameMap().getWamFile()!,
-                    entityId,
-                    entityData,
-                    undefined,
-                    scene.getGameMapFrontWrapper().getEntitiesManager(),
-                    { width, height },
-                ),
+            scene.beginFurniturePlacement(
+                (await scene.getEntitiesCollectionsManager().getEntityPrefab(collectionName, prefabId)) ??
+                    (() => {
+                        throw new Error(`Unknown prefab ${collectionName}/${prefabId}`);
+                    })(),
             );
-            return { entityId };
+            return { prefabId };
         },
+        placeFurniture: ({ x, y, entityId }) =>
+            executeWorldCommand(
+                command("furniture.place", {
+                    entityId,
+                    prefab: requiredPendingPrefab(scene),
+                    position: { x, y },
+                }),
+            ),
         selectEntity: async ({ entityId }) => {
             const entity = scene.getEntityById(entityId);
             if (!entity) {
                 throw new Error(`Entity ${entityId} not found`);
             }
             scene.openFurnitureEditor();
-            mapEditorEntityModeStore.set("EDIT");
-            mapEditorSelectedEntityIdStore.set(entityId);
+            scene.getMapEditorModeManager().setSelectedEntityId?.(entityId);
             return { entityId };
         },
-        moveEntity: async ({ entityId, x, y }) => {
-            await scene.getMapEditorModeManager().executeCommand(
-                new UpdateEntityFrontCommand(
-                    scene.getGameMap().getWamFile()!,
+        moveEntity: ({ entityId, x, y }) =>
+            executeWorldCommand(command("furniture.move", { entityId, position: { x, y } })),
+        changeEntityVariant: ({ entityId, collectionName, prefabId }) =>
+            executeWorldCommand(
+                command("furniture.setVariant", {
                     entityId,
-                    { x, y },
-                    undefined,
-                    undefined,
-                    scene.getGameMapFrontWrapper().getEntitiesManager(),
-                    scene,
-                ),
-            );
-            return { entityId, x, y };
-        },
-        changeEntityVariant: async ({ entityId, collectionName, prefabId }) => {
-            const prefab = await getPrefab(scene, collectionName, prefabId);
-            await scene.getMapEditorModeManager().executeCommand(
-                new UpdateEntityFrontCommand(
-                    scene.getGameMap().getWamFile()!,
-                    entityId,
-                    { prefabRef: { collectionName: prefab.collectionName, id: prefab.id } },
-                    undefined,
-                    undefined,
-                    scene.getGameMapFrontWrapper().getEntitiesManager(),
-                    scene,
-                ),
-            );
-            return { entityId, prefabId };
-        },
-        deleteEntity: async ({ entityId }) => {
-            const entity = scene.getEntityById(entityId);
-            if (!entity) {
-                throw new Error(`Entity ${entityId} not found`);
-            }
-            await scene.getMapEditorModeManager().executeCommand(
-                new DeleteEntityFrontCommand(
-                    scene.getGameMap().getWamFile()!,
-                    entityId,
-                    undefined,
-                    scene.getGameMapFrontWrapper().getEntitiesManager(),
-                ),
-            );
-        },
-        undo: async () => {
-            await scene.getMapEditorModeManager().undoCommand();
-        },
-        redo: async () => {
-            await scene.getMapEditorModeManager().redoCommand();
-        },
-        flushPersistence: async () => {
-            await scene.flushPersistence();
-        },
+                    prefab: { collectionName, prefabId },
+                }),
+            ),
+        deleteEntity: ({ entityId }) => executeWorldCommand(command("furniture.remove", { entityId })),
+        undo: () => executeWorldCommand(command("history.undo", {})),
+        redo: () => executeWorldCommand(command("history.redo", {})),
+        flushPersistence: () => executeWorldCommand(command("world.flush", {})),
         clearOverlay: async () => {
-            void controller.clearActiveOverlayAndReload();
+            await controller.clearActiveOverlayAndReload();
         },
     };
 
@@ -282,11 +228,30 @@ export function installStandaloneTestBridge(
 
     const postStep = () => {
         document.documentElement.dataset.standaloneActiveScene = sceneId;
+        document.documentElement.dataset.standaloneControllerActiveScene = controller.getActiveSceneId() ?? "";
         if (scene.CurrentPlayer) {
             document.documentElement.dataset.standalonePlayerPosition = JSON.stringify(bridge.getPlayerState());
         }
-        document.documentElement.dataset.standaloneEntities = JSON.stringify(bridge.getEntities());
-        document.documentElement.dataset.standaloneAgents = JSON.stringify(bridge.listAgents());
+        try {
+            const runtime = scene.getWorldSceneRuntime();
+            const entities = runtime.furnitureCommands.list().map((entity) => ({
+                id: entity.id,
+                x: entity.x,
+                y: entity.y,
+                width: entity.width,
+                height: entity.height,
+                prefabId: entity.prefab.prefabId,
+                collectionName: entity.prefab.collectionName,
+                name: entity.prefab.name,
+                color: entity.prefab.color,
+                direction: entity.prefab.direction,
+            }));
+            const agents = runtime.agentCommands.list();
+            document.documentElement.dataset.standaloneEntities = JSON.stringify(entities);
+            document.documentElement.dataset.standaloneAgents = JSON.stringify(agents);
+        } catch (error) {
+            console.warn("[StandaloneTestBridge] snapshot_failed", error);
+        }
         document.documentElement.dataset.standaloneNetworkAudit = JSON.stringify(readNetworkAudit());
     };
 
@@ -297,6 +262,7 @@ export function installStandaloneTestBridge(
             game.events.off(Phaser.Core.Events.POST_STEP, postStep);
             delete window.__standaloneTest;
             delete document.documentElement.dataset.standaloneActiveScene;
+            delete document.documentElement.dataset.standaloneControllerActiveScene;
             delete document.documentElement.dataset.standalonePlayerPosition;
             delete document.documentElement.dataset.standaloneEntities;
             delete document.documentElement.dataset.standaloneAgents;
@@ -305,92 +271,42 @@ export function installStandaloneTestBridge(
     };
 }
 
-async function getPrefab(scene: StandaloneGameScene, collectionName: string, prefabId: string): Promise<EntityPrefab> {
-    const prefab = await scene.getEntitiesCollectionsManager().getEntityPrefab(collectionName, prefabId);
+function ensureWorldEventSubscription(gateway: unknown & { subscribe(listener: (event: WorldEvent) => void): () => void }): void {
+    if (subscribedWorldEventGateway === gateway) {
+        return;
+    }
+    unsubscribeWorldEventGateway?.();
+    subscribedWorldEventGateway = gateway;
+    unsubscribeWorldEventGateway = gateway.subscribe((event) => {
+        worldEventsBuffer.push(toJson(event));
+        if (worldEventsBuffer.length > MAX_WORLD_EVENT_BUFFER) {
+            worldEventsBuffer.shift();
+        }
+    });
+}
+
+function command(
+    type: WorldCommand["type"],
+    payload: unknown,
+    options?: { sceneId?: string },
+): WorldCommand {
+    return {
+        schemaVersion: 1,
+        commandId: `test-${type}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        type,
+        sceneId: options?.sceneId as WorldCommand["sceneId"],
+        payload,
+    } as WorldCommand;
+}
+
+function requiredPendingPrefab(scene: StandaloneGameScene): { collectionName: string; prefabId: string } {
+    const prefab = scene.getPendingFurniturePrefab();
     if (!prefab) {
-        throw new Error(`Unknown prefab ${collectionName}/${prefabId}`);
+        throw new Error("No furniture prefab selected");
     }
-    return prefab;
-}
-
-async function ensurePrefabDimensions(
-    scene: StandaloneGameScene,
-    prefab: EntityPrefab,
-): Promise<{ width: number; height: number }> {
-    if (!scene.textures.exists(prefab.imagePath)) {
-        await new Promise<void>((resolve) => {
-            scene.load.image(prefab.imagePath, prefab.imagePath);
-            scene.load.once(`filecomplete-image-${prefab.imagePath}`, () => resolve());
-            scene.load.start();
-        }).catch(() => undefined);
-    }
-
-    const texture = scene.textures.get(prefab.imagePath);
-    const frame = texture.getSourceImage() as { width?: number; height?: number } | undefined;
     return {
-        width: frame?.width ?? 32,
-        height: frame?.height ?? 32,
-    };
-}
-
-function listEntities(scene: StandaloneGameScene): TestEntitySnapshot[] {
-    const wrapper = safeGetGameMapFrontWrapper(scene);
-    if (!wrapper) {
-        return [];
-    }
-    return [...wrapper.getEntitiesManager().getEntities().values()].map((entity) => ({
-        id: entity.entityId,
-        x: entity.x,
-        y: entity.y,
-        width: entity.displayWidth,
-        height: entity.displayHeight,
-        prefabId: entity.getPrefab().id,
-        collectionName: entity.getPrefab().collectionName,
-        name: entity.getPrefab().name,
-        color: entity.getPrefab().color,
-        direction: entity.getPrefab().direction,
-    }));
-}
-
-function listFurniturePrefabs(scene: StandaloneGameScene): TestPrefabSnapshot[] {
-    let snapshots: TestPrefabSnapshot[] = [];
-    const unsubscribe = scene
-        .getEntitiesCollectionsManager()
-        .getEntitiesPrefabsVariantStore()
-        .subscribe((variants) => {
-            snapshots = variants.map((variant) => ({
-                prefabId: variant.defaultPrefab.id,
-                collectionName: variant.defaultPrefab.collectionName,
-                name: variant.defaultPrefab.name,
-                hasCollisionGrid: (variant.defaultPrefab.collisionGrid?.length ?? 0) > 0,
-            }));
-        });
-    unsubscribe();
-    return snapshots;
-}
-
-function safeGetGameMapFrontWrapper(scene: StandaloneGameScene) {
-    try {
-        return scene.getGameMapFrontWrapper();
-    } catch {
-        return undefined;
-    }
-}
-
-function safeGetAgentController(scene: StandaloneGameScene) {
-    try {
-        return scene.getAgentController();
-    } catch {
-        return undefined;
-    }
-}
-
-function agentBridgeFailure<T>(code: AgentActionErrorCode, message = "Standalone scene is not loaded yet"): AgentActionResult<T> {
-    return {
-        ok: false,
-        actionId: "standalone-test-bridge",
-        code,
-        message,
+        collectionName: prefab.collectionName,
+        prefabId: prefab.id,
     };
 }
 
