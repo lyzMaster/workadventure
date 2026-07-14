@@ -11,7 +11,11 @@ import {
     getSceneState,
     getWorldEvents,
     gotoStandalone,
+    inspectStandaloneIndexedDb,
     listAgents,
+    readStandaloneAppWorld,
+    readStandaloneSceneOverlay,
+    seedLegacyStandaloneIndexedDbV1,
 } from "./helpers/standalone";
 
 test.describe("Standalone regression", () => {
@@ -322,12 +326,37 @@ test.describe("Standalone regression", () => {
         });
 
         console.log("step: reload restore");
+        const playerBeforeReload = await getPlayerState(page);
         await executeWorldCommand(page, "world.flush", {});
+        const appWorldBeforeReload = (await readStandaloneAppWorld(page)) as
+            | {
+                  activeSceneId: string;
+                  scenes?: Record<string, { agents?: Record<string, unknown> }>;
+              }
+            | null;
+        const homeOverlayBeforeReload = await readStandaloneSceneOverlay(page, "home");
+        expect(appWorldBeforeReload).not.toBeNull();
+        expect(appWorldBeforeReload?.activeSceneId).toBe("home");
+        expect(appWorldBeforeReload?.scenes?.home?.agents).toHaveProperty("agent-home");
+        expect(appWorldBeforeReload?.scenes?.home?.agents).not.toHaveProperty("agent-home-2");
+        expect(appWorldBeforeReload?.scenes?.home).not.toHaveProperty("entities");
+        expect(homeOverlayBeforeReload).not.toBeNull();
+        expect(homeOverlayBeforeReload).toHaveProperty("entities");
         await page.reload();
         await page.waitForFunction(() => typeof window.__standaloneTest !== "undefined");
         await expect
             .poll(async () => (await getEntities(page)).some((entity) => entity.id === placed.entityId))
             .toBeTruthy();
+        const playerAfterReload = await getPlayerState(page);
+        expect(playerAfterReload).toMatchObject({
+            x: playerBeforeReload.x,
+            y: playerBeforeReload.y,
+        });
+        const restoredAgentsAfterReload = await listAgents(page);
+        expect(restoredAgentsAfterReload.ok).toBe(true);
+        expect(restoredAgentsAfterReload.ok ? restoredAgentsAfterReload.value.map((agent) => agent.id).sort() : []).toEqual([
+            "agent-home",
+        ]);
 
         console.log("step: office isolate");
         await expect(
@@ -407,7 +436,11 @@ test.describe("Standalone regression", () => {
         await page.waitForFunction(() => typeof window.__standaloneTest !== "undefined");
         await expect(page.getByTestId("standalone-active-scene")).toContainText("Home");
         const restoredHomeAgents = await listAgents(page);
-        expect(restoredHomeAgents).toMatchObject({ ok: true, value: [] });
+        expect(restoredHomeAgents.ok).toBe(true);
+        expect(restoredHomeAgents.ok ? restoredHomeAgents.value.map((agent) => agent.id).sort() : []).toEqual([
+            "agent-home",
+            "agent-switch",
+        ]);
         entities = await getEntities(page);
         expect(entities.some((entity) => entity.id === placed.entityId)).toBeTruthy();
         expect(entities.some((entity) => entity.id === officePlaced.entityId)).toBeFalsy();
@@ -443,6 +476,12 @@ test.describe("Standalone regression", () => {
         await expect(page.getByTestId("standalone-active-scene")).toContainText("Home");
         entities = await getEntities(page);
         expect(entities.some((entity) => entity.id === placed.entityId)).toBeFalsy();
+        const agentsAfterClearOverlay = await listAgents(page);
+        expect(agentsAfterClearOverlay.ok).toBe(true);
+        expect(agentsAfterClearOverlay.ok ? agentsAfterClearOverlay.value.map((agent) => agent.id).sort() : []).toEqual([
+            "agent-home",
+            "agent-switch",
+        ]);
 
         console.log("step: network audit");
         const network = (await getSceneState(page)).network;
@@ -455,5 +494,166 @@ test.describe("Standalone regression", () => {
         expect(events.some((event) => event.type === "scene.changed")).toBeTruthy();
         expect(events.some((event) => event.type === "agent.spawned")).toBeTruthy();
         expect(events.some((event) => event.type === "furniture.placed")).toBeTruthy();
+    });
+
+    test("IndexedDB v1 升级保留 scene-overlays 并创建 app-worlds", async ({ page }) => {
+        await seedLegacyStandaloneIndexedDbV1(page, "home");
+
+        await gotoStandalone(page, "home");
+        await expect(executeWorldCommand(page, "world.flush", {})).resolves.toMatchObject({ status: "succeeded" });
+
+        const database = await inspectStandaloneIndexedDb(page);
+        expect(database.name).toBe("workadventure-standalone");
+        expect(database.version).toBe(2);
+        expect(database.stores.sort()).toEqual(["app-worlds", "scene-overlays"]);
+
+        const overlay = await readStandaloneSceneOverlay(page, "home");
+        expect(overlay).toMatchObject({
+            sceneId: "home",
+            baseMapId: "standalone-home",
+            baseMapRevision: 1,
+        });
+
+        const appWorld = await readStandaloneAppWorld(page);
+        expect(appWorld).toMatchObject({
+            schemaVersion: 1,
+            worldId: "standalone-default-world",
+            activeSceneId: "home",
+        });
+    });
+
+    test("AppWorld 持久化失败时保持运行时结果并允许 flush 重试", async ({ page }) => {
+        await page.addInitScript(() => {
+            const marker = "__standaloneFailAppWorldPutInstalled";
+            if ((window as Window & Record<string, unknown>)[marker]) {
+                return;
+            }
+            (window as Window & Record<string, unknown>)[marker] = true;
+            const originalPut = IDBObjectStore.prototype.put;
+            IDBObjectStore.prototype.put = function (...args: Parameters<IDBObjectStore["put"]>) {
+                if (
+                    sessionStorage.getItem("__standalone_fail_app_world_put") === "true" &&
+                    this.transaction.db.name === "workadventure-standalone" &&
+                    this.name === "app-worlds"
+                ) {
+                    throw new Error("Injected AppWorld put failure");
+                }
+                return originalPut.apply(this, args);
+            };
+        });
+
+        await gotoStandalone(page, "home");
+
+        const agentAppearance = {
+            textures: [
+                {
+                    id: "standalone-agent-persistence-failure",
+                    url: "/resources/characters/pipoya/Male%2001-1.png",
+                    layer: 0,
+                },
+            ],
+        };
+        await expect(
+            executeWorldCommand(
+                page,
+                "agent.spawn",
+                {
+                    characterId: "agent-persist",
+                    name: "Agent Persist",
+                    sceneId: "home",
+                    appearance: agentAppearance,
+                    spawnPosition: { x: 128, y: 128, direction: "down", moving: false },
+                },
+                "home",
+                undefined,
+                "agent-spawn-persist",
+            ),
+        ).resolves.toMatchObject({ status: "succeeded" });
+
+        await page.evaluate(() => {
+            sessionStorage.setItem("__standalone_fail_app_world_put", "true");
+        });
+
+        const faceResult = await executeWorldCommand<{ position: { direction: string } }>(
+            page,
+            "agent.face",
+            { characterId: "agent-persist", direction: "right" },
+            undefined,
+            undefined,
+            "agent-face-persist-failure",
+        );
+        expect(faceResult).toMatchObject({
+            status: "failed",
+            error: {
+                code: "persistence_failed",
+                details: {
+                    runtimeApplied: true,
+                    dirty: true,
+                },
+            },
+        });
+
+        const runtimeStateAfterFailure = await executeWorldCommand<{ position: { direction: string } }>(
+            page,
+            "agent.getState",
+            { characterId: "agent-persist" },
+        );
+        expect(runtimeStateAfterFailure).toMatchObject({ status: "succeeded" });
+        expect((runtimeStateAfterFailure.data as { position: { direction: string } }).position.direction).toBe("right");
+
+        await expect(
+            executeWorldCommand(page, "world.flush", {}, undefined, undefined, "world-flush-persist-failure"),
+        ).resolves.toMatchObject({
+            status: "failed",
+            error: { code: "persistence_failed" },
+        });
+
+        const sceneStateDuringFailure = await executeWorldCommand<{
+            persistence: { dirty: boolean; lastError?: { code: string } };
+        }>(page, "scene.getState", {});
+        expect(sceneStateDuringFailure).toMatchObject({ status: "succeeded" });
+        expect(
+            (sceneStateDuringFailure.data as {
+                persistence: { dirty: boolean; lastError?: { code: string } };
+            }).persistence,
+        ).toMatchObject({
+            dirty: true,
+            lastError: { code: "persistence_failed" },
+        });
+
+        await page.evaluate(() => {
+            sessionStorage.removeItem("__standalone_fail_app_world_put");
+        });
+
+        await expect(
+            executeWorldCommand(page, "world.flush", {}, undefined, undefined, "world-flush-persist-retry"),
+        ).resolves.toMatchObject({
+            status: "succeeded",
+            data: {
+                appWorldSaved: true,
+                sceneOverlaySaved: true,
+            },
+        });
+
+        const sceneStateAfterRecovery = await executeWorldCommand<{
+            persistence: { dirty: boolean; lastError?: { code: string } };
+        }>(page, "scene.getState", {});
+        expect(sceneStateAfterRecovery).toMatchObject({ status: "succeeded" });
+        expect(
+            (sceneStateAfterRecovery.data as {
+                persistence: { dirty: boolean; lastError?: { code: string } };
+            }).persistence.dirty,
+        ).toBe(false);
+
+        await page.reload();
+        await page.waitForFunction(() => typeof window.__standaloneTest !== "undefined");
+        await expect
+            .poll(async () => executeWorldCommand(page, "agent.getState", { characterId: "agent-persist" }))
+            .toMatchObject({
+                status: "succeeded",
+                data: {
+                    position: { direction: "right" },
+                },
+            });
     });
 });

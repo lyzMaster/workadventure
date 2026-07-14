@@ -10,7 +10,17 @@ import {
     storageDtoToStandaloneWam,
     type WAMFileFormat,
 } from "@workadventure/map-editor";
-import { Direction, type CharacterMoveResult } from "@workadventure/game-model";
+import {
+    Direction,
+    type AgentCharacterDefinition,
+    type AgentCharacterSnapshot,
+    type CharacterMoveResult,
+    type CharacterSnapshot,
+} from "@workadventure/game-model";
+import type {
+    PersistedAgentState,
+    PersistedPlayerState,
+} from "@workadventure/app-world";
 import { DirtyScene } from "../../front/Phaser/Game/DirtyScene";
 import { SuperLoaderPlugin } from "../../front/Phaser/Services/SuperLoaderPlugin";
 import type { WokaTextureDescriptionInterface } from "../../front/Phaser/Entity/PlayerTextures";
@@ -52,6 +62,16 @@ import { FurnitureRuntimeController } from "../furniture/FurnitureRuntimeControl
 import { StandaloneAgentCommandAdapter } from "../commands/StandaloneAgentCommandAdapter";
 import type { WorldSceneRuntime } from "../commands/types";
 import { Deferred } from "../../common/Deferred";
+import {
+    persistedAgentToDefinition,
+    persistedPositionToRuntime,
+} from "@workadventure/app-world";
+import { PathTileType } from "../../front/Utils/PathTileType";
+import type {
+    RestoreDiagnostic,
+    RestoreResult,
+    ScenePersistenceRuntime,
+} from "../world/ScenePersistenceRuntime";
 
 type Position = { x: number; y: number };
 type Tilemap = Phaser.Tilemaps.Tilemap;
@@ -59,8 +79,13 @@ type Tileset = Phaser.Tilemaps.Tileset;
 type PhysicsSprite = Phaser.Physics.Arcade.Sprite;
 
 const MOUSE_WHEEL_ZOOM_RATE = 0.5;
+const PLAYER_PERSISTENCE_DEBOUNCE_MS = 150;
 
-export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeHost {
+export interface StandaloneGameScenePersistenceCallbacks {
+    onPlayerMovementSettled?(snapshot: CharacterSnapshot): void;
+}
+
+export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeHost, ScenePersistenceRuntime {
     public readonly superLoad: SuperLoaderPlugin;
     public CurrentPlayer!: LocalPlayer;
     public Map!: Tilemap;
@@ -89,6 +114,7 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
     private outlineManager!: OutlineManager;
     private mapEditTransport: LocalMapEditTransport | undefined;
     private pendingFurniturePrefab: EntityPrefab | undefined;
+    private playerPersistenceDebounceHandle: ReturnType<typeof setTimeout> | undefined;
 
     public constructor(
         private readonly context: StandaloneSceneContext,
@@ -96,6 +122,7 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
         private readonly storage: SceneStorage,
         private readonly playerName: string,
         private readonly characterTextures: WokaTextureDescriptionInterface[],
+        private readonly persistenceCallbacks: StandaloneGameScenePersistenceCallbacks = {},
     ) {
         super({ key: context.sceneKey });
         this.superLoad = new SuperLoaderPlugin(this);
@@ -156,7 +183,18 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
                 agentCommands: new StandaloneAgentCommandAdapter(this.agentCharacterController),
                 furnitureCommands: this.furnitureRuntimeController,
                 historyCommands: this.furnitureRuntimeController,
-                flush: () => this.flushPersistence(),
+                flush: async () => {
+                    try {
+                        await this.flushPersistence();
+                        return { flushed: true, sceneOverlaySaved: true };
+                    } catch (error) {
+                        return {
+                            flushed: true,
+                            sceneOverlaySaved: false,
+                            sceneOverlayError: error instanceof Error ? error.message : String(error),
+                        };
+                    }
+                },
             };
             this.userInputManager = new UserInputManager(this, new StandaloneUserInputHandler(this));
             this.cameraManager = new CameraManager(
@@ -189,6 +227,10 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
     }
 
     public cleanupClosingScene(): void {
+        if (this.playerPersistenceDebounceHandle !== undefined) {
+            clearTimeout(this.playerPersistenceDebounceHandle);
+            this.playerPersistenceDebounceHandle = undefined;
+        }
         this.agentCharacterController?.destroy();
         this.agentCharacterRepository?.clear();
         this.CurrentPlayer?.destroy();
@@ -202,6 +244,133 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
 
     public async flushPersistence(): Promise<void> {
         await this.mapEditTransport?.flush();
+    }
+
+    public async flushSceneOverlay(): Promise<void> {
+        await this.flushPersistence();
+    }
+
+    public getPlayerSnapshot(): CharacterSnapshot | null {
+        return this.CurrentPlayer?.getSnapshot() ?? null;
+    }
+
+    public listAgentSnapshots(): AgentCharacterSnapshot[] {
+        return this.agentCharacterRepository?.listSnapshots() ?? [];
+    }
+
+    public async restorePlayer(state: PersistedPlayerState): Promise<RestoreResult> {
+        const desired = persistedPositionToRuntime(state.position);
+        const fallback = this.computeStartPosition();
+        const fallbackDirection = this.context.defaultSpawn?.direction ?? Direction.DOWN;
+        if (!this.isPositionWithinMap(desired) || !this.isPositionWalkable(desired)) {
+            this.CurrentPlayer.teleportTo(fallback.x, fallback.y, fallbackDirection);
+            return {
+                applied: false,
+                code: "fallback_to_spawn",
+                message: "Persisted player position was invalid, restored to default spawn",
+                position: {
+                    x: fallback.x,
+                    y: fallback.y,
+                    direction: fallbackDirection,
+                },
+            };
+        }
+
+        this.CurrentPlayer.teleportTo(desired.x, desired.y, desired.direction);
+        return {
+            applied: true,
+            code: "restored",
+            message: "Player position restored",
+            position: {
+                x: desired.x,
+                y: desired.y,
+                direction: desired.direction,
+            },
+        };
+    }
+
+    public async restoreAgents(states: readonly PersistedAgentState[]): Promise<RestoreDiagnostic[]> {
+        const diagnostics: RestoreDiagnostic[] = [];
+        for (const state of [...states].sort((a, b) => a.characterId.localeCompare(b.characterId))) {
+            if (state.sceneId !== this.sceneId) {
+                diagnostics.push({
+                    characterId: state.characterId,
+                    code: "scene_mismatch",
+                    message: `Agent "${state.characterId}" belongs to scene "${state.sceneId}"`,
+                    applied: false,
+                });
+                continue;
+            }
+
+            let spawnPosition = persistedPositionToRuntime(state.position);
+            if (!this.isPositionWithinMap(spawnPosition)) {
+                diagnostics.push({
+                    characterId: state.characterId,
+                    code: "position_out_of_bounds",
+                    message: `Agent "${state.characterId}" position is outside the map`,
+                    applied: false,
+                });
+                continue;
+            }
+            if (!this.isPositionWalkable(spawnPosition)) {
+                const nearest = this.findNearestWalkablePosition(spawnPosition);
+                if (!nearest) {
+                    diagnostics.push({
+                        characterId: state.characterId,
+                        code: "spawn_blocked",
+                        message: `Agent "${state.characterId}" has no walkable restore position`,
+                        applied: false,
+                    });
+                    continue;
+                }
+                spawnPosition = {
+                    ...nearest,
+                    moving: false,
+                };
+            }
+
+            const definition: AgentCharacterDefinition = persistedAgentToDefinition({
+                ...state,
+                position: {
+                    x: spawnPosition.x,
+                    y: spawnPosition.y,
+                    direction: spawnPosition.direction,
+                },
+            });
+            const result = await this.agentCharacterController.spawn(definition);
+            if (!result.ok) {
+                diagnostics.push({
+                    characterId: state.characterId,
+                    code: result.code,
+                    message: result.message,
+                    applied: false,
+                });
+                continue;
+            }
+            this.agentCharacterController.stop(state.characterId);
+            diagnostics.push({
+                characterId: state.characterId,
+                code:
+                    spawnPosition.x === state.position.x &&
+                    spawnPosition.y === state.position.y &&
+                    spawnPosition.direction === state.position.direction
+                        ? "restored"
+                        : "adjusted",
+                message:
+                    spawnPosition.x === state.position.x &&
+                    spawnPosition.y === state.position.y &&
+                    spawnPosition.direction === state.position.direction
+                        ? `Agent "${state.characterId}" restored`
+                        : `Agent "${state.characterId}" restored to nearest walkable position`,
+                applied: true,
+                position: {
+                    x: spawnPosition.x,
+                    y: spawnPosition.y,
+                    direction: spawnPosition.direction,
+                },
+            });
+        }
+        return diagnostics;
     }
 
     public getGameMap(): GameMap {
@@ -388,7 +557,7 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
     }
 
     private queueTmjLoad(mapUrlFile: string): void {
-        this.load.on(`filecomplete-tilemapJSON-${mapUrlFile}`, (key: string, type: string, data: unknown) => {
+        this.load.on(`filecomplete-tilemapJSON-${mapUrlFile}`, (_key: string, _type: string, data: unknown) => {
             this.onMapLoad(data);
         });
         this.load.tilemapTiledJSON(mapUrlFile, mapUrlFile);
@@ -506,8 +675,105 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
         }
     }
 
+    private isPositionWithinMap(position: { x: number; y: number }): boolean {
+        const grid = this.gameMapFrontWrapper.getCollisionGrid({ emitMapChangedEvent: false });
+        const tileDimensions = this.gameMapFrontWrapper.getTileDimensions();
+        const tileX = Math.floor(position.x / tileDimensions.width);
+        const tileY = Math.floor(position.y / tileDimensions.height);
+        return tileY >= 0 && tileY < grid.length && tileX >= 0 && tileX < (grid[0]?.length ?? 0);
+    }
+
+    private isPositionWalkable(position: { x: number; y: number }): boolean {
+        if (!this.isPositionWithinMap(position)) {
+            return false;
+        }
+        const grid = this.gameMapFrontWrapper.getCollisionGrid({ emitMapChangedEvent: false });
+        const tileDimensions = this.gameMapFrontWrapper.getTileDimensions();
+        const tileX = Math.floor(position.x / tileDimensions.width);
+        const tileY = Math.floor(position.y / tileDimensions.height);
+        const value = grid[tileY]?.[tileX];
+        return (
+            value === PathTileType.Walkable ||
+            value === PathTileType.Exit ||
+            value === PathTileType.Start ||
+            value === PathTileType.MeetingRoom ||
+            value === PathTileType.PersonalDesk
+        );
+    }
+
+    private findNearestWalkablePosition(position: {
+        x: number;
+        y: number;
+        direction: "up" | "right" | "down" | "left";
+    }): {
+        x: number;
+        y: number;
+        direction: "up" | "right" | "down" | "left";
+    } | null {
+        const grid = this.gameMapFrontWrapper.getCollisionGrid({ emitMapChangedEvent: false });
+        const tileDimensions = this.gameMapFrontWrapper.getTileDimensions();
+        const startTile = {
+            x: Math.floor(position.x / tileDimensions.width),
+            y: Math.floor(position.y / tileDimensions.height),
+        };
+        const seen = new Set<string>([`${startTile.x},${startTile.y}`]);
+        const queue = [startTile];
+        const neighbours = [
+            { x: 0, y: -1 },
+            { x: 1, y: 0 },
+            { x: 0, y: 1 },
+            { x: -1, y: 0 },
+            { x: 1, y: -1 },
+            { x: 1, y: 1 },
+            { x: -1, y: 1 },
+            { x: -1, y: -1 },
+        ];
+
+        while (queue.length > 0) {
+            const tile = queue.shift();
+            if (!tile) {
+                continue;
+            }
+            const value = grid[tile.y]?.[tile.x];
+            if (
+                value === PathTileType.Walkable ||
+                value === PathTileType.Exit ||
+                value === PathTileType.Start ||
+                value === PathTileType.MeetingRoom ||
+                value === PathTileType.PersonalDesk
+            ) {
+                return {
+                    x: tile.x * tileDimensions.width + tileDimensions.width * 0.5,
+                    y: tile.y * tileDimensions.height + tileDimensions.height * 0.5,
+                    direction: position.direction,
+                };
+            }
+            for (const offset of neighbours) {
+                const nextX = tile.x + offset.x;
+                const nextY = tile.y + offset.y;
+                const key = `${nextX},${nextY}`;
+                if (seen.has(key) || nextY < 0 || nextY >= grid.length || nextX < 0 || nextX >= (grid[0]?.length ?? 0)) {
+                    continue;
+                }
+                seen.add(key);
+                queue.push({ x: nextX, y: nextY });
+            }
+        }
+
+        return null;
+    }
+
     private handleCurrentPlayerHasMovedEvent(event: CharacterMovedEvent): void {
         this.gameMapFrontWrapper.setPosition(event.x, event.y);
+        if (!event.moving && this.persistenceCallbacks.onPlayerMovementSettled) {
+            if (this.playerPersistenceDebounceHandle !== undefined) {
+                clearTimeout(this.playerPersistenceDebounceHandle);
+            }
+            this.playerPersistenceDebounceHandle = setTimeout(() => {
+                this.playerPersistenceDebounceHandle = undefined;
+                this.persistenceCallbacks.onPlayerMovementSettled?.(this.CurrentPlayer.getSnapshot());
+            }, PLAYER_PERSISTENCE_DEBOUNCE_MS);
+        }
         this.markDirty();
     }
 }

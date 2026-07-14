@@ -328,6 +328,13 @@ class FakeRuntimeProvider implements ActiveSceneRuntimeProvider {
                 canUndo: history.canUndo,
                 canRedo: history.canRedo,
             },
+            persistence: {
+                loaded: true,
+                restoring: false,
+                dirty: false,
+                revision: 0,
+                restoreDiagnosticCount: 0,
+            },
         };
     }
 

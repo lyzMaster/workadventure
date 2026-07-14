@@ -205,3 +205,123 @@ export async function getWorldEvents(page: Page): Promise<WorldEvent[]> {
 export async function expectSingleCanvas(page: Page): Promise<void> {
     await expect(page.locator("canvas")).toHaveCount(1);
 }
+
+export async function inspectStandaloneIndexedDb(page: Page): Promise<{
+    name: string;
+    version: number;
+    stores: string[];
+}> {
+    return page.evaluate(async () => {
+        return await new Promise((resolve, reject) => {
+            const request = indexedDB.open("workadventure-standalone");
+            request.onsuccess = () => {
+                const database = request.result;
+                resolve({
+                    name: database.name,
+                    version: database.version,
+                    stores: Array.from(database.objectStoreNames),
+                });
+                database.close();
+            };
+            request.onerror = () => reject(request.error ?? new Error("Unable to inspect standalone IndexedDB"));
+        });
+    }) as Promise<{
+        name: string;
+        version: number;
+        stores: string[];
+    }>;
+}
+
+export async function readStandaloneAppWorld(
+    page: Page,
+    worldId = "standalone-default-world",
+): Promise<Record<string, unknown> | null> {
+    return page.evaluate(async (key) => {
+        return await new Promise((resolve, reject) => {
+            const request = indexedDB.open("workadventure-standalone");
+            request.onsuccess = () => {
+                const database = request.result;
+                const transaction = database.transaction("app-worlds", "readonly");
+                const store = transaction.objectStore("app-worlds");
+                const getRequest = store.get(key);
+                getRequest.onsuccess = () => resolve((getRequest.result as Record<string, unknown> | undefined) ?? null);
+                getRequest.onerror = () => reject(getRequest.error ?? new Error("Unable to read AppWorld snapshot"));
+                transaction.oncomplete = () => database.close();
+            };
+            request.onerror = () => reject(request.error ?? new Error("Unable to open standalone IndexedDB"));
+        });
+    }, worldId) as Promise<Record<string, unknown> | null>;
+}
+
+export async function readStandaloneSceneOverlay(
+    page: Page,
+    sceneId: "home" | "office",
+): Promise<Record<string, unknown> | null> {
+    return page.evaluate(async (key) => {
+        return await new Promise((resolve, reject) => {
+            const request = indexedDB.open("workadventure-standalone");
+            request.onsuccess = () => {
+                const database = request.result;
+                const transaction = database.transaction("scene-overlays", "readonly");
+                const store = transaction.objectStore("scene-overlays");
+                const getRequest = store.get(key);
+                getRequest.onsuccess = () => resolve((getRequest.result as Record<string, unknown> | undefined) ?? null);
+                getRequest.onerror = () => reject(getRequest.error ?? new Error("Unable to read SceneOverlay snapshot"));
+                transaction.oncomplete = () => database.close();
+            };
+            request.onerror = () => reject(request.error ?? new Error("Unable to open standalone IndexedDB"));
+        });
+    }, sceneId) as Promise<Record<string, unknown> | null>;
+}
+
+export async function seedLegacyStandaloneIndexedDbV1(
+    page: Page,
+    sceneId: "home" | "office" = "home",
+): Promise<void> {
+    await page.goto("/__standalone_seed__");
+    await page.evaluate(async (targetSceneId) => {
+        const baseMapByScene = {
+            home: { baseMapId: "standalone-home", baseMapRevision: 1 },
+            office: { baseMapId: "standalone-office", baseMapRevision: 2 },
+        } as const;
+
+        await new Promise<void>((resolve, reject) => {
+            const deleteRequest = indexedDB.deleteDatabase("workadventure-standalone");
+            deleteRequest.onsuccess = () => resolve();
+            deleteRequest.onerror = () => reject(deleteRequest.error ?? new Error("Unable to delete standalone IndexedDB"));
+            deleteRequest.onblocked = () => reject(new Error("Standalone IndexedDB deletion blocked"));
+        });
+
+        await new Promise<void>((resolve, reject) => {
+            const request = indexedDB.open("workadventure-standalone", 1);
+            request.onupgradeneeded = () => {
+                const database = request.result;
+                if (!database.objectStoreNames.contains("scene-overlays")) {
+                    database.createObjectStore("scene-overlays", { keyPath: "sceneId" });
+                }
+            };
+            request.onsuccess = () => {
+                const database = request.result;
+                const transaction = database.transaction("scene-overlays", "readwrite");
+                const store = transaction.objectStore("scene-overlays");
+                const baseMap = baseMapByScene[targetSceneId as "home" | "office"];
+                store.put({
+                    schemaVersion: 1,
+                    sceneId: targetSceneId,
+                    baseMapId: baseMap.baseMapId,
+                    baseMapRevision: baseMap.baseMapRevision,
+                    baseEntityIds: [],
+                    entities: {},
+                    areas: [],
+                    updatedAt: "2026-07-14T00:00:00.000Z",
+                });
+                transaction.oncomplete = () => {
+                    database.close();
+                    resolve();
+                };
+                transaction.onerror = () => reject(transaction.error ?? new Error("Unable to seed v1 scene overlay"));
+            };
+            request.onerror = () => reject(request.error ?? new Error("Unable to open standalone IndexedDB v1"));
+        });
+    }, sceneId);
+}

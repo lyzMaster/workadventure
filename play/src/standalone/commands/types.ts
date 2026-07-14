@@ -6,7 +6,7 @@ import type {
     CharacterSayType,
     Direction,
 } from "@workadventure/game-model";
-import type { WorldCommandType } from "@workadventure/world-command";
+import type { WorldCommand, WorldCommandResult, WorldCommandType } from "@workadventure/world-command";
 import type { StandaloneSceneDefinition, StandaloneSceneId } from "../StandaloneSceneDefinition";
 
 export interface FurniturePrefabSnapshot {
@@ -73,6 +73,19 @@ export interface SceneFurnitureSummary {
     canRedo: boolean;
 }
 
+export interface WorldPersistenceSnapshot {
+    loaded: boolean;
+    restoring: boolean;
+    dirty: boolean;
+    revision: number;
+    lastSavedAt?: string;
+    lastError?: {
+        code: string;
+        message: string;
+    };
+    restoreDiagnosticCount: number;
+}
+
 export interface WorldSceneStateSnapshot {
     activeSceneId: StandaloneSceneId | null;
     loading: boolean;
@@ -80,6 +93,7 @@ export interface WorldSceneStateSnapshot {
     player: CharacterSnapshot | null;
     agents: AgentCharacterSnapshot[];
     furniture: SceneFurnitureSummary;
+    persistence: WorldPersistenceSnapshot;
 }
 
 export interface SceneRuntimeSnapshot {
@@ -149,7 +163,7 @@ export interface WorldSceneRuntime {
     agentCommands: AgentCommandAdapter;
     furnitureCommands: FurnitureCommandController;
     historyCommands: Pick<FurnitureCommandController, "undo" | "redo" | "getHistoryState">;
-    flush(): Promise<void>;
+    flush(): Promise<unknown>;
 }
 
 export interface ActiveSceneRuntimeProvider {
@@ -159,4 +173,8 @@ export interface ActiveSceneRuntimeProvider {
     subscribe(listener: (snapshot: SceneRuntimeSnapshot) => void): () => void;
     getSceneStateSnapshot(): WorldSceneStateSnapshot;
     isTransitionInProgress(): boolean;
+    afterCommand?(
+        command: WorldCommand,
+        result: WorldCommandResult,
+    ): Promise<void | WorldCommandResult> | void | WorldCommandResult;
 }

@@ -12,7 +12,10 @@ import type { DefaultStandaloneSceneController } from "./StandaloneSceneControll
 import type { SceneStorage } from "./SceneStorage";
 import type { StandaloneSceneDefinition } from "./StandaloneSceneDefinition";
 import type { StandaloneSceneContext } from "./StandaloneSceneResolver";
-import { StandaloneGameScene } from "./runtime/StandaloneGameScene";
+import {
+    StandaloneGameScene,
+    type StandaloneGameScenePersistenceCallbacks,
+} from "./runtime/StandaloneGameScene";
 import "./standalone.css";
 
 export class StandaloneApp {
@@ -41,8 +44,16 @@ export class StandaloneApp {
         storage: SceneStorage,
         playerName: string,
         characterTextures: WokaTextureDescriptionInterface[],
+        persistenceCallbacks: StandaloneGameScenePersistenceCallbacks = {},
     ): StandaloneGameScene {
-        const scene = new StandaloneGameScene(context, definition, storage, playerName, characterTextures);
+        const scene = new StandaloneGameScene(
+            context,
+            definition,
+            storage,
+            playerName,
+            characterTextures,
+            persistenceCallbacks,
+        );
         // WaScaleManager owns zoom by resizing the render buffer and/or changing the camera zoom.
         // Phaser's RESIZE mode independently rewrites the same canvas dimensions and causes the
         // canvas to collapse after a wheel animation. Use the same initial sizing contract as the

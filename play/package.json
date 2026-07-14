@@ -33,6 +33,7 @@
     },
     "dependencies": {
         "@sentry/svelte": "^10.54.0",
+        "@workadventure/app-world": "1.0.0",
         "@workadventure/game-model": "1.0.0",
         "@workadventure/map-editor": "1.0.0",
         "@workadventure/math-utils": "1.0.0",

@@ -29,6 +29,7 @@
     "paths": {
       "@wa-icons": ["./src/front/Components/Icons.ts"],
       "@wa-modals": ["./src/front/Components/Modal/modalManager.ts"],
+      "@workadventure/app-world": ["../libs/app-world/src/index.ts"],
       "@workadventure/world-command": ["../libs/world-command/src/index.ts"]
     },
   },

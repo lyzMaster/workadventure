@@ -199,7 +199,10 @@ export class DefaultWorldCommandGateway implements WorldCommandGateway {
                 return this.makeAbortedResult(command, record.startedAt, sceneId, record.abortReason ?? "cancelled");
             }
             this.publish("command.started", command, sceneId ?? "unknown");
-            const result = await this.executeCommand(record);
+            let result = await this.executeCommand(record);
+            if (this.runtimeProvider.afterCommand) {
+                result = (await this.runtimeProvider.afterCommand(command, result)) ?? result;
+            }
             const parsed = WorldCommandResultSchema.parse(result);
             this.publishTerminalEvent(command, parsed);
             return parsed;
@@ -373,8 +376,7 @@ export class DefaultWorldCommandGateway implements WorldCommandGateway {
             case "history.redo":
                 return this.fromHistoryResult(command, record.startedAt, await runtime.historyCommands.redo());
             case "world.flush":
-                await runtime.flush();
-                return this.success(command, record.startedAt, { flushed: true });
+                return this.success(command, record.startedAt, (await runtime.flush()) ?? { flushed: true });
             default:
                 return this.makeFailedResult(command, "unsupported_command", `Unsupported command ${command.type}`, record.startedAt);
         }
@@ -393,7 +395,6 @@ export class DefaultWorldCommandGateway implements WorldCommandGateway {
         this.sceneSwitchInProgress = true;
         try {
             this.cancelSceneScopedCommands(command.commandId);
-            await this.runtimeProvider.getActiveRuntime()?.flush();
             await this.runtimeProvider.switchScene(command.payload.sceneId);
             const nextSceneId = this.runtimeProvider.getActiveSceneId() ?? command.payload.sceneId;
             this.publish("scene.changed", command, nextSceneId, {

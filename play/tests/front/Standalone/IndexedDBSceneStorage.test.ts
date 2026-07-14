@@ -55,7 +55,7 @@ describe("IndexedDBSceneStorage", () => {
             {
                 sceneId: "office",
                 baseMapId: "standalone-office",
-                baseMapRevision: 1,
+                baseMapRevision: 2,
                 updatedAt: "2026-07-13T12:01:00.000Z",
             },
         ]);

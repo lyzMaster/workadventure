@@ -15,9 +15,9 @@ export const standaloneSceneRegistry: Record<StandaloneSceneId, StandaloneSceneD
         sceneId: "office",
         displayName: "Office",
         baseMapId: "standalone-office",
-        baseMapRevision: 1,
+        baseMapRevision: 2,
         wamUrl: "/maps/office/office.wam",
-        defaultSpawn: { x: 256, y: 192, direction: "down" },
+        defaultSpawn: { x: 288, y: 560, direction: "down" },
     },
 };
 
