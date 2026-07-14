@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 import { get } from "svelte/store";
 import type { UserInputHandlerInterface } from "../../front/Interfaces/UserInputHandlerInterface";
-import { mapEditorModeStore } from "../../front/Stores/MapEditorStore";
+import { mapEditorModeStore } from "../../front/Stores/MapEditorCoreStore";
 import type { Shortcut } from "../../front/Phaser/UserInput/UserInputManager";
 import type { StandaloneGameScene } from "./StandaloneGameScene";
 

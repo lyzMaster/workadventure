@@ -6,16 +6,15 @@ import type { MapEditorController } from "../MapEditorController";
 import type { MapEditorSceneContext } from "../../SceneContext";
 import type { EntitiesManager } from "../../GameMap/EntitiesManager";
 import { EntitiesManagerEvent } from "../../GameMap/EntitiesManager";
+import { mapEditorModeStore, mapEditorVisibilityStore } from "../../../../Stores/MapEditorCoreStore";
 import {
     mapEditorCopiedEntityDataPropertiesStore,
     mapEditorEntityFileDroppedStore,
     mapEditorEntityModeStore,
-    mapEditorModeStore,
     mapEditorSelectedEntityDraggedStore,
+    mapEditorSelectedEntityIdStore,
     mapEditorSelectedEntityPrefabStore,
-    mapEditorSelectedEntityStore,
-    mapEditorVisibilityStore,
-} from "../../../../Stores/MapEditorStore";
+} from "../../../../Stores/MapEditorEntityEditorStore";
 import { DeleteEntityFrontCommand } from "../Commands/Entity/DeleteEntityFrontCommand";
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
 import { TexturesHelper } from "../../../Helpers/TexturesHelper";
@@ -37,7 +36,7 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
 
     protected mapEditorSelectedEntityPrefabStoreUnsubscriber: Unsubscriber | undefined;
     protected mapEntityEditorModeStoreUnsubscriber: Unsubscriber | undefined;
-    protected mapEditorSelectedEntityStoreUnsubscriber: Unsubscriber | undefined;
+    protected mapEditorSelectedEntityIdStoreUnsubscriber: Unsubscriber | undefined;
     protected mapEditorSelectedEntityDraggedStoreUnsubscriber: Unsubscriber | undefined;
 
     protected constructor(mapEditorModeManager: MapEditorController) {
@@ -59,7 +58,7 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
     public clear(): void {
         this.scene.input.topOnly = false;
         mapEditorEntityModeStore.set("ADD");
-        mapEditorSelectedEntityStore.set(undefined);
+        mapEditorSelectedEntityIdStore.set(undefined);
         this.entitiesManager.clearAllEntitiesTint();
         this.entitiesManager.clearAllEntitiesEditOutlines();
         this.cleanPreview();
@@ -92,7 +91,7 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
                     if (document.activeElement instanceof HTMLElement) {
                         document.activeElement.blur();
                     }
-                    mapEditorSelectedEntityStore.set(undefined);
+                    mapEditorSelectedEntityIdStore.set(undefined);
                     mapEditorEntityModeStore.set("ADD");
                     return;
                 }
@@ -104,8 +103,11 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
             }
             case "backspace":
             case "delete": {
-                get(mapEditorSelectedEntityStore)?.delete();
-                mapEditorSelectedEntityStore.set(undefined);
+                const entityId = get(mapEditorSelectedEntityIdStore);
+                if (entityId) {
+                    this.entitiesManager.getEntities().get(entityId)?.delete();
+                }
+                mapEditorSelectedEntityIdStore.set(undefined);
                 mapEditorEntityModeStore.set("ADD");
                 break;
             }
@@ -115,7 +117,7 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
     protected unsubscribeToStores(): void {
         this.mapEditorSelectedEntityPrefabStoreUnsubscriber?.();
         this.mapEntityEditorModeStoreUnsubscriber?.();
-        this.mapEditorSelectedEntityStoreUnsubscriber?.();
+        this.mapEditorSelectedEntityIdStoreUnsubscriber?.();
         this.mapEditorSelectedEntityDraggedStoreUnsubscriber?.();
     }
 
@@ -157,8 +159,12 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
             },
         );
 
-        this.mapEditorSelectedEntityStoreUnsubscriber = mapEditorSelectedEntityStore.subscribe((entity) => {
+        this.mapEditorSelectedEntityIdStoreUnsubscriber = mapEditorSelectedEntityIdStore.subscribe((entityId) => {
             this.entityOldPositionPreview?.destroy();
+            if (!entityId) {
+                return;
+            }
+            const entity = this.entitiesManager.getEntities().get(entityId);
             if (!entity) {
                 return;
             }

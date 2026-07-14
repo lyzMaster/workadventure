@@ -14,7 +14,7 @@ import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
 import type { ActionsMenuAction } from "../../Stores/ActionsMenuStore";
 import { actionsMenuStore } from "../../Stores/ActionsMenuStore";
-import { mapEditorModeStore } from "../../Stores/MapEditorStore";
+import { mapEditorModeStore } from "../../Stores/MapEditorCoreStore";
 import { createColorStore } from "../../Stores/OutlineColorStore";
 import type { ActivatableInterface } from "../Game/ActivatableInterface";
 import type { MapEditorSceneContext } from "../Game/SceneContext";

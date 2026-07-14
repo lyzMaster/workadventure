@@ -2,13 +2,21 @@ import type { Command, LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
 import type { MapEditorSceneContext } from "../../front/Phaser/Game/SceneContext";
-import { mapEditorModeStore, mapEditorSelectedToolStore } from "../../front/Stores/MapEditorStore";
+import { mapEditorModeStore, mapEditorSelectedToolStore } from "../../front/Stores/MapEditorCoreStore";
+import { mapEditorSelectedEntityIdStore } from "../../front/Stores/MapEditorEntityEditorStore";
 import { EntityEditorTool } from "../../front/Phaser/Game/MapEditor/Tools/EntityEditorTool";
 import type { MapEditorRuntimeController } from "../../front/Phaser/Game/MapEditor/MapEditorController";
 import type { FrontCommandInterface } from "../../front/Phaser/Game/MapEditor/Commands/FrontCommandInterface";
 import type { FrontCommand } from "../../front/Phaser/Game/MapEditor/Commands/FrontCommand";
 import type { MapEditResult, MapEditTransport } from "../../front/Phaser/Game/MapEditor/MapEditTransport";
 import { EditorToolName } from "../../front/Phaser/Game/MapEditor/EditorToolName";
+
+export interface StandaloneEntityMapEditorSnapshot {
+    active: boolean;
+    canUndo: boolean;
+    canRedo: boolean;
+    selectedEntityId?: string;
+}
 
 const unsupportedMapEditTransport: MapEditTransport = {
     acknowledgement: "local",
@@ -31,6 +39,8 @@ export class StandaloneEntityMapEditorModeManager implements MapEditorRuntimeCon
     private currentRunningCommand: Promise<void>;
     private runningUndoRedoCommand: Promise<void> = Promise.resolve();
     private mapEditorModeUnsubscriber?: Unsubscriber;
+    private selectedEntityIdUnsubscriber?: Unsubscriber;
+    private selectedEntityId?: string;
 
     public constructor(
         private readonly scene: MapEditorSceneContext,
@@ -114,6 +124,19 @@ export class StandaloneEntityMapEditorModeManager implements MapEditorRuntimeCon
         }
     }
 
+    public getSnapshot(): StandaloneEntityMapEditorSnapshot {
+        return {
+            active: this.active,
+            canUndo: this.currentCommandIndex >= 0,
+            canRedo: this.currentCommandIndex < this.localCommandsHistory.length - 1,
+            selectedEntityId: this.selectedEntityId,
+        };
+    }
+
+    public setSelectedEntityId(entityId: string | undefined): void {
+        this.selectedEntityId = entityId;
+    }
+
     public async flush(): Promise<void> {
         await this.currentRunningCommand;
         await this.runningUndoRedoCommand;
@@ -123,6 +146,7 @@ export class StandaloneEntityMapEditorModeManager implements MapEditorRuntimeCon
     public destroy(): void {
         this.entityEditorTool.destroy();
         this.mapEditorModeUnsubscriber?.();
+        this.selectedEntityIdUnsubscriber?.();
     }
 
     public handleKeyDownEvent(event: KeyboardEvent): boolean {
@@ -177,6 +201,9 @@ export class StandaloneEntityMapEditorModeManager implements MapEditorRuntimeCon
         this.mapEditorModeUnsubscriber = mapEditorModeStore.subscribe((active) => {
             this.active = active;
             this.equipTool(active ? EditorToolName.EntityEditor : undefined);
+        });
+        this.selectedEntityIdUnsubscriber = mapEditorSelectedEntityIdStore.subscribe((entityId) => {
+            this.selectedEntityId = entityId;
         });
     }
 }

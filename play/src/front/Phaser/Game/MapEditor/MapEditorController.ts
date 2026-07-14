@@ -17,4 +17,5 @@ export interface MapEditorRuntimeController extends MapEditorController {
     destroy(): void;
     handleKeyDownEvent(event: KeyboardEvent): boolean;
     equipTool(tool?: EditorToolName): void;
+    setSelectedEntityId?(entityId: string | undefined): void;
 }

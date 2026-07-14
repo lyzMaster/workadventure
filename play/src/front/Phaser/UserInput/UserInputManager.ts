@@ -5,7 +5,7 @@ import { touchScreenManager } from "../../Touch/TouchScreenManager";
 import { MobileJoystick } from "../Components/MobileJoystick";
 import { baseEnableUserInputsStore } from "../../Stores/UserInputBaseStore";
 import type { UserInputHandlerInterface } from "../../Interfaces/UserInputHandlerInterface";
-import { mapEditorModeStore } from "../../Stores/MapEditorStore";
+import { mapEditorModeStore } from "../../Stores/MapEditorCoreStore";
 import LL from "../../../i18n/i18n-svelte";
 
 import Key = Phaser.Input.Keyboard.Key;

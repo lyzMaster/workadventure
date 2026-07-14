@@ -12,7 +12,6 @@ import type { DefaultStandaloneSceneController } from "./StandaloneSceneControll
 import type { SceneStorage } from "./SceneStorage";
 import type { StandaloneSceneDefinition } from "./StandaloneSceneDefinition";
 import type { StandaloneSceneContext } from "./StandaloneSceneResolver";
-import { installStandaloneTestBridge, type StandaloneTestBridge } from "./runtime/StandaloneTestBridge";
 import { StandaloneGameScene } from "./runtime/StandaloneGameScene";
 import "./standalone.css";
 
@@ -21,9 +20,11 @@ export class StandaloneApp {
     private scene: StandaloneGameScene | undefined;
     private editor: ReturnType<typeof mount> | undefined;
     private resizeHandler: (() => void) | undefined;
-    private testBridge: StandaloneTestBridge | undefined;
+    private testBridge: { destroy(): void } | undefined;
+    private sceneController: DefaultStandaloneSceneController | undefined;
 
     public mountEditor(controller: DefaultStandaloneSceneController): void {
+        this.sceneController = controller;
         if (this.editor) {
             return;
         }
@@ -84,7 +85,15 @@ export class StandaloneApp {
         waScaleManager.setGame(this.game);
         this.scene = scene;
         this.ensureResizeSubscription();
-        this.testBridge = installStandaloneTestBridge(this.game, scene, context.sceneId);
+        if (import.meta.env.VITE_ENABLE_TEST_BRIDGE === "true") {
+            void import("./runtime/StandaloneTestBridge").then(({ installStandaloneTestBridge }) => {
+                if (!this.game || this.scene !== scene || !this.sceneController) {
+                    return;
+                }
+                this.testBridge?.destroy();
+                this.testBridge = installStandaloneTestBridge(this.game, scene, context.sceneId, this.sceneController);
+            });
+        }
         return scene;
     }
 

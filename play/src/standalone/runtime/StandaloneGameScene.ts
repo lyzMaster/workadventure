@@ -3,6 +3,7 @@ import { CancelablePromise } from "cancelable-promise";
 import type { ITiledMap, ITiledMapTileset } from "@workadventure/tiled-map-type-guard";
 import {
     EntityPermissions,
+    type EntityPrefab,
     type EntityPrefabType,
     GameMap,
     type WAMFileFormat,
@@ -22,8 +23,16 @@ import { EntitiesCollectionsManager } from "../../front/Phaser/Game/MapEditor/En
 import { PathfindingManager } from "../../front/Utils/PathfindingManager";
 import { CameraManager } from "../../front/Phaser/Game/CameraManager";
 import type { MapEditorRuntimeController } from "../../front/Phaser/Game/MapEditor/MapEditorController";
+import { EditorToolName } from "../../front/Phaser/Game/MapEditor/EditorToolName";
 import { OutlineManager } from "../../front/Phaser/Game/UI/OutlineManager";
 import { UsernameDomLayer } from "../../front/Phaser/Game/UsernameDomLayer";
+import type { Entity } from "../../front/Phaser/ECS/Entity";
+import { mapEditorModeStore } from "../../front/Stores/MapEditorCoreStore";
+import {
+    mapEditorEntityModeStore,
+    mapEditorSelectedEntityIdStore,
+    mapEditorSelectedEntityPrefabStore,
+} from "../../front/Stores/MapEditorEntityEditorStore";
 import type { SceneStorage } from "../SceneStorage";
 import { mergeSceneOverlay } from "../SceneOverlay";
 import { LocalMapEditTransport } from "../LocalMapEditTransport";
@@ -31,6 +40,7 @@ import type { StandaloneSceneDefinition } from "../StandaloneSceneDefinition";
 import type { StandaloneSceneContext } from "../StandaloneSceneResolver";
 import { StandaloneUserInputHandler } from "./StandaloneUserInputHandler";
 import { StandaloneEntityMapEditorModeManager } from "./StandaloneEntityMapEditorModeManager";
+import { UpdateEntityFrontCommand } from "../../front/Phaser/Game/MapEditor/Commands/Entity/UpdateEntityFrontCommand";
 
 type Position = { x: number; y: number };
 type Tilemap = Phaser.Tilemaps.Tilemap;
@@ -91,6 +101,7 @@ export class StandaloneGameScene extends DirtyScene {
     private mapEditorModeManager!: MapEditorRuntimeController;
     private outlineManager!: OutlineManager;
     private mapEditTransport: LocalMapEditTransport | undefined;
+    private pendingFurniturePrefab: EntityPrefab | undefined;
 
     public constructor(
         private readonly context: StandaloneSceneContext,
@@ -203,6 +214,77 @@ export class StandaloneGameScene extends DirtyScene {
 
     public getPathfindingManager(): PathfindingManager {
         return this.pathfindingManager;
+    }
+
+    public getEntityById(entityId: string): Entity | undefined {
+        return this.gameMapFrontWrapper.getEntitiesManager().getEntities().get(entityId);
+    }
+
+    public getPendingFurniturePrefab(): EntityPrefab | undefined {
+        return this.pendingFurniturePrefab;
+    }
+
+    public getStandaloneEntityEditorSnapshot() {
+        return this.mapEditorModeManager instanceof StandaloneEntityMapEditorModeManager
+            ? this.mapEditorModeManager.getSnapshot()
+            : undefined;
+    }
+
+    public openFurnitureEditor(): void {
+        mapEditorModeStore.switchMode(true);
+        this.mapEditorModeManager.equipTool(EditorToolName.EntityEditor);
+    }
+
+    public closeFurnitureEditor(): void {
+        this.pendingFurniturePrefab = undefined;
+        mapEditorSelectedEntityIdStore.set(undefined);
+        mapEditorSelectedEntityPrefabStore.set(undefined);
+        mapEditorEntityModeStore.set("ADD");
+        mapEditorModeStore.switchMode(false);
+    }
+
+    public beginFurniturePlacement(prefab: EntityPrefab): void {
+        this.pendingFurniturePrefab = prefab;
+        mapEditorSelectedEntityIdStore.set(undefined);
+        mapEditorEntityModeStore.set("ADD");
+        mapEditorSelectedEntityPrefabStore.set(prefab);
+        this.markDirty();
+    }
+
+    public clearFurnitureSelection(): void {
+        this.pendingFurniturePrefab = undefined;
+        mapEditorSelectedEntityIdStore.set(undefined);
+        mapEditorEntityModeStore.set("ADD");
+        mapEditorSelectedEntityPrefabStore.set(undefined);
+        this.markDirty();
+    }
+
+    public async deleteSelectedFurniture(): Promise<void> {
+        const entityId = this.getStandaloneEntityEditorSnapshot()?.selectedEntityId;
+        if (!entityId) {
+            return;
+        }
+        this.getEntityById(entityId)?.delete();
+    }
+
+    public async updateSelectedFurniturePrefab(prefab: EntityPrefab): Promise<void> {
+        const entityId = this.getStandaloneEntityEditorSnapshot()?.selectedEntityId;
+        if (!entityId) {
+            return;
+        }
+        await this.getMapEditorModeManager().executeCommand(
+            new UpdateEntityFrontCommand(
+                this.getGameMap().getWamFile()!,
+                entityId,
+                { prefabRef: { collectionName: prefab.collectionName, id: prefab.id } },
+                undefined,
+                undefined,
+                this.getGameMapFrontWrapper().getEntitiesManager(),
+                this,
+            ),
+        );
+        mapEditorSelectedEntityPrefabStore.set(undefined);
+        this.markDirty();
     }
 
     public getEntityPermissions(): EntityPermissions {

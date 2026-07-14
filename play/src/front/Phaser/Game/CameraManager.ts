@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { mapEditorModeStore } from "../../Stores/MapEditorStore";
+import { mapEditorModeStore } from "../../Stores/MapEditorCoreStore";
 import { Easing } from "../../types";
 import type { Character } from "../Entity/Character";
 import { hasMovedEventName, type Player } from "../Player/Player";

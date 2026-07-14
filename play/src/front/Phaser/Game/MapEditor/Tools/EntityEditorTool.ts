@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/svelte";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
+import { mapEditorSelectedToolStore } from "../../../../Stores/MapEditorCoreStore";
 import {
     mapEditorCopiedEntityDataPropertiesStore,
     mapEditorDeleteCustomEntityEventStore,
@@ -11,9 +12,8 @@ import {
     mapEditorEntityModeStore,
     mapEditorEntityUploadEventStore,
     mapEditorModifyCustomEntityEventStore,
-    mapEditorSelectedEntityStore,
-    mapEditorSelectedToolStore,
-} from "../../../../Stores/MapEditorStore";
+    mapEditorSelectedEntityIdStore,
+} from "../../../../Stores/MapEditorEntityEditorStore";
 import { TexturesHelper } from "../../../Helpers/TexturesHelper";
 import { CopyEntityEventData, EntitiesManagerEvent } from "../../GameMap/EntitiesManager";
 import { CreateEntityFrontCommand } from "../Commands/Entity/CreateEntityFrontCommand";
@@ -326,7 +326,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
             if (document.activeElement instanceof HTMLElement) {
                 document.activeElement.blur();
             }
-            mapEditorSelectedEntityStore.set(undefined);
+            mapEditorSelectedEntityIdStore.set(undefined);
         }
 
         if (!this.entityPrefabPreview || !this.entityPrefab) {
@@ -383,7 +383,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                 if (get(mapEditorEntityFileDroppedStore)) {
                     mapEditorEntityFileDroppedStore.set(false);
                     mapEditorEntityModeStore.set("EDIT");
-                    mapEditorSelectedEntityStore.set(openEntity);
+                    mapEditorSelectedEntityIdStore.set(openEntity?.entityId);
                 }
             })
             .catch((e) => console.error(e));

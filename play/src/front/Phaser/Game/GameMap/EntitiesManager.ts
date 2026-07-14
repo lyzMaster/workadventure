@@ -4,18 +4,17 @@ import { AreaDataProperties, EntityDataProperties, EntityDimensions, EntityPrefa
 import type { Observable } from "rxjs";
 import { Subject } from "rxjs";
 import type { Unsubscriber } from "svelte/store";
-import { get } from "svelte/store";
 import { z } from "zod";
 import * as Sentry from "@sentry/svelte";
 import { actionsMenuStore } from "../../../Stores/ActionsMenuStore";
+import { mapEditorModeStore, mapEditorSelectedToolStore } from "../../../Stores/MapEditorCoreStore";
 import {
     mapEditorEntityModeStore,
-    mapEditorModeStore,
     mapEditorSelectedEntityDraggedStore,
+    mapEditorSelectedEntityIdStore,
     mapEditorSelectedEntityPrefabStore,
-    mapEditorSelectedEntityStore,
-    mapEditorSelectedToolStore,
-} from "../../../Stores/MapEditorStore";
+} from "../../../Stores/MapEditorEntityEditorStore";
+import { get } from "svelte/store";
 import { Entity, EntityEvent } from "../../ECS/Entity";
 import { TexturesHelper } from "../../Helpers/TexturesHelper";
 import type { MapEditorSceneContext } from "../SceneContext";
@@ -187,6 +186,9 @@ export class EntitiesManager extends EventEmitter {
         }
         entity.destroy();
         this.scene.markDirty();
+        if (get(mapEditorSelectedEntityIdStore) === id) {
+            mapEditorSelectedEntityIdStore.set(undefined);
+        }
 
         return this.entities.delete(id);
     }
@@ -244,7 +246,8 @@ export class EntitiesManager extends EventEmitter {
             if (!this.scene.input.activePointer.leftButtonDown()) {
                 return;
             }
-            const entity = get(mapEditorSelectedEntityStore);
+            const entityId = get(mapEditorSelectedEntityIdStore);
+            const entity = entityId ? this.entities.get(entityId) : undefined;
             if (!entity) {
                 return;
             }
@@ -259,7 +262,8 @@ export class EntitiesManager extends EventEmitter {
         // Phaser unsubscribes from the keyboard events when the scene is destroyed, so we don't need to unsubscribe here
 
         this.shiftKey?.on(Phaser.Input.Keyboard.Events.DOWN, () => {
-            const entity = get(mapEditorSelectedEntityStore);
+            const entityId = get(mapEditorSelectedEntityIdStore);
+            const entity = entityId ? this.entities.get(entityId) : undefined;
             if (!entity) {
                 return;
             }
@@ -269,7 +273,8 @@ export class EntitiesManager extends EventEmitter {
         // Phaser unsubscribes from the keyboard events when the scene is destroyed, so we don't need to unsubscribe here
 
         this.shiftKey?.on(Phaser.Input.Keyboard.Events.UP, () => {
-            const entity = get(mapEditorSelectedEntityStore);
+            const entityId = get(mapEditorSelectedEntityIdStore);
+            const entity = entityId ? this.entities.get(entityId) : undefined;
             if (!entity) {
                 return;
             }
@@ -384,7 +389,7 @@ export class EntitiesManager extends EventEmitter {
 
                 mapEditorEntityModeStore.set("EDIT");
                 mapEditorSelectedEntityDraggedStore.set(true);
-                mapEditorSelectedEntityStore.set(entity);
+                mapEditorSelectedEntityIdStore.set(entity.entityId);
             }
         });
         entity.on(Phaser.Input.Events.POINTER_OVER, (pointer: Pointer) => {
@@ -421,7 +426,7 @@ export class EntitiesManager extends EventEmitter {
         if (document.activeElement instanceof HTMLElement) {
             document.activeElement.blur();
         }
-        mapEditorSelectedEntityStore.set(undefined);
+        mapEditorSelectedEntityIdStore.set(undefined);
         const eventData: CopyEntityEventData = {
             position: positionToPlaceCopyAt,
             prefabRef: entity.getEntityData().prefabRef,
