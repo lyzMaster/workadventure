@@ -1,35 +1,26 @@
 #!/usr/bin/env bash
-. "$(dirname "$0")/_/husky.sh"
+set -euo pipefail
 
-# Check if all strings are translated in all languages
-check_translations() {
-  cd play || exit 1
-  npm run i18n:check
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+run_npm_script_if_present() {
+  local directory="$1"
+  local script_name="$2"
+
+  if [ ! -f "$directory/package.json" ]; then
+    return 0
+  fi
+
+  (
+    cd "$directory"
+    npm run --if-present "$script_name"
+  )
 }
 
-(
-cd play || exit
-npm run precommit
-)
-#(
-#check_translations
-#)
-(
-check_translations
-)
-(
-cd tests || exit
-npm run precommit
-)
-(
-cd libs/map-editor || exit
-npm run precommit
-)
-(
-cd libs/shared-utils || exit
-npm run precommit
-)
-(
-cd libs/store-utils || exit
-npm run precommit
-)
+run_npm_script_if_present play precommit
+run_npm_script_if_present play i18n:check
+run_npm_script_if_present tests precommit
+run_npm_script_if_present libs/map-editor precommit
+run_npm_script_if_present libs/shared-utils precommit
+run_npm_script_if_present libs/store-utils precommit
