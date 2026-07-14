@@ -20,10 +20,10 @@ import type {
 import type { Observable } from "rxjs";
 import { Subject } from "rxjs";
 import { Deferred } from "@workadventure/shared-utils/src/Deferred";
-import { PathTileType } from "../../../Utils/PathfindingManager";
+import { PathTileType } from "../../../Utils/PathTileType";
 import type { Entity } from "../../ECS/Entity";
 import { DEPTH_OVERLAY_INDEX } from "../DepthIndexes";
-import type { MapEditorSceneContext } from "../SceneContext";
+import type { MapEditorSceneContext } from "../MapEditorSceneContext";
 import { EntitiesManager } from "./EntitiesManager";
 import { AreasManager } from "./AreasManager";
 
@@ -1038,12 +1038,7 @@ export class GameMapFrontWrapper {
         ) {
             return false;
         }
-        const playersPositions = [
-            ...Array.from(this.scene.getRemotePlayersRepository().getPlayers().values()).map((player) =>
-                player.getPosition(),
-            ),
-            ...(this.scene.CurrentPlayer ? [this.scene.CurrentPlayer.getPosition()] : []),
-        ];
+        const playersPositions = this.scene.CurrentPlayer ? [this.scene.CurrentPlayer.getPosition()] : [];
 
         // check if position is not occupied by a WOKA
         for (const position of playersPositions) {

@@ -17,9 +17,8 @@ import { actionsMenuStore } from "../../Stores/ActionsMenuStore";
 import { mapEditorModeStore } from "../../Stores/MapEditorCoreStore";
 import { createColorStore } from "../../Stores/OutlineColorStore";
 import type { ActivatableInterface } from "../Game/ActivatableInterface";
-import type { MapEditorSceneContext } from "../Game/SceneContext";
+import type { MapEditorSceneContext } from "../Game/MapEditorSceneContext";
 import type { OutlineableInterface } from "../Game/OutlineableInterface";
-import { SpeechDomElement } from "../Entity/SpeechDomElement";
 import LL from "../../../i18n/i18n-svelte";
 import { DEBUG_MODE } from "../../Enum/EnvironmentVariable";
 
@@ -52,8 +51,6 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
     private oldPosition: { x: number; y: number };
 
     private updatePropertyActivableTimeOut: NodeJS.Timeout | undefined;
-
-    private speechDomElement: SpeechDomElement | null = null;
 
     private debugActivationZoneCircle: Graphics | null = null;
 
@@ -503,22 +500,6 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
             ...data,
             id: this.entityId,
         };
-    }
-
-    // Play text on the Image entity
-    public playText(id: string, text: string, duration = 10000, callback = () => this.destroyText()) {
-        const x = this.x + this.width / 2;
-        this.speechDomElement = new SpeechDomElement(id, text, this.scene, x, this.y - 10, callback);
-        this.scene.add.existing(this.speechDomElement);
-        this.speechDomElement.play(x, this.y - 20, duration);
-    }
-
-    // Destroy text
-    public destroyText() {
-        if (this.speechDomElement) {
-            this.speechDomElement.destroy();
-            this.speechDomElement = null;
-        }
     }
 
     // Get action button label from properties

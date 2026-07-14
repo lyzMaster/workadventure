@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
-import { ResizableScene } from "../Login/ResizableScene";
 import { HdpiManager } from "./HdpiManager";
+import { isResizableSceneLike } from "../Game/ResizableSceneLike";
 
 import ScaleManager = Phaser.Scale.ScaleManager;
 import Camera = Phaser.Cameras.Scene2D.Camera;
@@ -95,7 +95,7 @@ export class WaScaleManager {
 
         // Note: onResize will be called twice (once here and once in Game.ts), but we have no better way.
         for (const scene of this.game.scene.getScenes(true)) {
-            if (scene instanceof ResizableScene) {
+            if (isResizableSceneLike(scene)) {
                 // We are delaying the call to the "render" event because otherwise, the "camera" coordinates are not correctly updated.
                 scene.events.once(Phaser.Scenes.Events.RENDER, () => scene.onResize());
             }

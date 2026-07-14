@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import type { AreaData, AtLeast, LockableAreaPropertyData } from "@workadventure/map-editor";
 import { deepmergeIntoCustom, type DeepMergeLeafURI } from "deepmerge-ts";
 import { get } from "svelte/store";
-import type { MapEditorSceneContext } from "../Game/SceneContext";
+import type { MapEditorSceneContext } from "../Game/MapEditorSceneContext";
 
 import LL from "../../../i18n/i18n-svelte";
 import type { AreasManager } from "../Game/GameMap/AreasManager";
@@ -162,7 +162,7 @@ export class Area extends Rectangle {
         let message: string = get(LL).area.noAccess(); // Default message
         const messageId = `area-blocked-${this.areaData.id}`;
         let callback = () => {
-            currentPlayer.destroyText(messageId);
+            currentPlayer.destroyText?.(messageId);
         };
         if (this.areasManager) {
             const blockReason = this.areasManager.getAreaBlockReason(this.areaData.id);
@@ -185,7 +185,7 @@ export class Area extends Rectangle {
                                 //message = message.replace("[SPACE]", svg.outerHTML);
                                 callback = () => {
                                     setAreaPropertyVariable(this.areaData.id, lockableProperty.id, "lock", false);
-                                    currentPlayer.destroyText(messageId);
+                                    currentPlayer.destroyText?.(messageId);
                                 };
                                 break;
                             }
@@ -203,8 +203,8 @@ export class Area extends Rectangle {
         }
 
         // Display message above the player's woka using playText
-        currentPlayer.destroyText(messageId);
-        currentPlayer.playText(
+        currentPlayer.destroyText?.(messageId);
+        currentPlayer.playText?.(
             messageId,
             message,
             5000, // Display for 5 seconds

@@ -1,5 +1,5 @@
 import type { Command } from "@workadventure/map-editor";
-import type { MapEditorSceneContext } from "../SceneContext";
+import type { MapEditorSceneContext } from "../MapEditorSceneContext";
 import type { FrontCommandInterface } from "./Commands/FrontCommandInterface";
 import type { EditorToolName } from "./EditorToolName";
 

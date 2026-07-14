@@ -2,7 +2,6 @@ import { writable, type Readable } from "svelte/store";
 import { mapEditorModeStore } from "../front/Stores/MapEditorCoreStore";
 import {
     mapEditorEntityModeStore,
-    mapEditorSelectedAreaPreviewStore,
     mapEditorSelectedEntityIdStore,
 } from "../front/Stores/MapEditorStore";
 import { resolveInitialStandaloneSceneId, saveActiveStandaloneSceneId } from "./ActiveStandaloneScene";
@@ -163,7 +162,6 @@ export class DefaultStandaloneSceneController implements StandaloneSceneControll
     private clearEditorRuntimeState(): void {
         mapEditorModeStore.switchMode(false);
         mapEditorSelectedEntityIdStore.set(undefined);
-        mapEditorSelectedAreaPreviewStore.set(undefined);
         mapEditorEntityModeStore.set("ADD");
     }
 

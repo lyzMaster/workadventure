@@ -9,7 +9,7 @@ import type {
 } from "@workadventure/map-editor";
 import { AreaPermissions } from "@workadventure/map-editor";
 import { Area } from "../../Entity/Area";
-import type { MapEditorSceneContext } from "../SceneContext";
+import type { MapEditorSceneContext } from "../MapEditorSceneContext";
 import { personalAreaDataStore } from "../../../Stores/PersonalDeskStore";
 import { areaPropertyVariablesManagerStore } from "../../../Stores/AreaPropertyVariablesStore";
 

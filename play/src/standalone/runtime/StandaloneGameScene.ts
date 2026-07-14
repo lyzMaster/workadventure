@@ -1,5 +1,4 @@
 import * as Phaser from "phaser";
-import { CancelablePromise } from "cancelable-promise";
 import type { ITiledMap, ITiledMapTileset } from "@workadventure/tiled-map-type-guard";
 import {
     EntityPermissions,
@@ -9,23 +8,19 @@ import {
     type WAMFileFormat,
 } from "@workadventure/map-editor";
 import { wamFileMigration } from "@workadventure/map-editor/src/Migrations/WamFileMigration";
-import { Direction } from "@workadventure/game-model";
+import { Direction, type CharacterMoveResult } from "@workadventure/game-model";
 import { DirtyScene } from "../../front/Phaser/Game/DirtyScene";
 import { SuperLoaderPlugin } from "../../front/Phaser/Services/SuperLoaderPlugin";
 import type { WokaTextureDescriptionInterface } from "../../front/Phaser/Entity/PlayerTextures";
 import { lazyLoadPlayerCharacterTextures } from "../../front/Phaser/Entity/PlayerTexturesLoadingManager";
-import { Player, hasMovedEventName } from "../../front/Phaser/Player/Player";
-import type { HasPlayerMovedInterface } from "../../front/Api/Events/HasPlayerMovedInterface";
 import { UserInputManager } from "../../front/Phaser/UserInput/UserInputManager";
 import { waScaleManager } from "../../front/Phaser/Services/WaScaleManager";
 import { GameMapFrontWrapper } from "../../front/Phaser/Game/GameMap/GameMapFrontWrapper";
 import { EntitiesCollectionsManager } from "../../front/Phaser/Game/MapEditor/EntitiesCollectionsManager";
-import { PathfindingManager } from "../../front/Utils/PathfindingManager";
 import { CameraManager } from "../../front/Phaser/Game/CameraManager";
 import type { MapEditorRuntimeController } from "../../front/Phaser/Game/MapEditor/MapEditorController";
 import { EditorToolName } from "../../front/Phaser/Game/MapEditor/EditorToolName";
 import { OutlineManager } from "../../front/Phaser/Game/UI/OutlineManager";
-import { UsernameDomLayer } from "../../front/Phaser/Game/UsernameDomLayer";
 import type { Entity } from "../../front/Phaser/ECS/Entity";
 import { mapEditorModeStore } from "../../front/Stores/MapEditorCoreStore";
 import {
@@ -41,6 +36,11 @@ import type { StandaloneSceneContext } from "../StandaloneSceneResolver";
 import { StandaloneUserInputHandler } from "./StandaloneUserInputHandler";
 import { StandaloneEntityMapEditorModeManager } from "./StandaloneEntityMapEditorModeManager";
 import { UpdateEntityFrontCommand } from "../../front/Phaser/Game/MapEditor/Commands/Entity/UpdateEntityFrontCommand";
+import type { CharacterRuntimeHost } from "../characters/CharacterRuntimeHost";
+import { CharacterNameLayer } from "../characters/CharacterNameLayer";
+import { DEFAULT_LOCAL_PLAYER_MOVEMENT, LocalPlayer } from "../characters/LocalPlayer";
+import { characterMovedEventName, type CharacterMovedEvent } from "../characters/CharacterEvents";
+import { CharacterPathfinder } from "../pathfinding/CharacterPathfinder";
 
 type Position = { x: number; y: number };
 type Tilemap = Phaser.Tilemaps.Tilemap;
@@ -70,21 +70,14 @@ class Deferred<T> {
 
 const MOUSE_WHEEL_ZOOM_RATE = 0.5;
 
-export class StandaloneGameScene extends DirtyScene {
+export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeHost {
     public readonly superLoad: SuperLoaderPlugin;
-    public readonly MapPlayersByKey = new Map<number, Player>();
-    public readonly groups = new Map<number, unknown>();
-    public readonly connection = {
-        getAllTags: () => [],
-        hasTag: () => false,
-    };
-    public CurrentPlayer!: Player;
+    public CurrentPlayer!: LocalPlayer;
     public Map!: Tilemap;
     public Objects: PhysicsSprite[] = [];
     public Terrains: Tileset[] = [];
     public userInputManager!: UserInputManager;
-    public usernameDomLayer!: UsernameDomLayer;
-    public roomUrl: string;
+    public usernameLayer!: CharacterNameLayer;
 
     private readonly sceneReadyToStartDeferred = new Deferred<void>();
     public readonly sceneReadyToStartPromise = this.sceneReadyToStartDeferred.promise;
@@ -96,7 +89,7 @@ export class StandaloneGameScene extends DirtyScene {
     private baseEntityIds: string[] = [];
     private gameMapFrontWrapper!: GameMapFrontWrapper;
     private entitiesCollectionsManager = new EntitiesCollectionsManager();
-    private pathfindingManager!: PathfindingManager;
+    private pathfinder!: CharacterPathfinder;
     private cameraManager!: CameraManager;
     private mapEditorModeManager!: MapEditorRuntimeController;
     private outlineManager!: OutlineManager;
@@ -111,8 +104,15 @@ export class StandaloneGameScene extends DirtyScene {
         private readonly characterTextures: WokaTextureDescriptionInterface[],
     ) {
         super({ key: context.sceneKey });
-        this.roomUrl = context.sceneKey;
         this.superLoad = new SuperLoaderPlugin(this);
+    }
+
+    public get phaserScene(): Phaser.Scene {
+        return this;
+    }
+
+    public get sceneId(): string {
+        return this.context.sceneId;
     }
 
     public preload(): void {
@@ -131,7 +131,7 @@ export class StandaloneGameScene extends DirtyScene {
             this.Map = this.add.tilemap(this.mapUrlFile);
             this.createTilesets();
             this.physics.world.setBounds(0, 0, this.Map.widthInPixels, this.Map.heightInPixels);
-            this.usernameDomLayer = new UsernameDomLayer(this);
+            this.usernameLayer = new CharacterNameLayer(this);
             this.gameMapFrontWrapper = new GameMapFrontWrapper(
                 this,
                 new GameMap(this.mapFile, this.wamFile),
@@ -142,10 +142,10 @@ export class StandaloneGameScene extends DirtyScene {
                 console.error("[Standalone] game_map_initialize_failed", error);
                 this.sceneReadyToStartDeferred.reject(error);
             });
-            this.pathfindingManager = new PathfindingManager(
-                this.gameMapFrontWrapper.getCollisionGrid(),
-                this.gameMapFrontWrapper.getTileDimensions(),
-            );
+            this.pathfinder = new CharacterPathfinder({
+                getCollisionGrid: () => this.gameMapFrontWrapper.getCollisionGrid({ emitMapChangedEvent: false }),
+                getTileDimensions: () => this.gameMapFrontWrapper.getTileDimensions(),
+            });
             this.userInputManager = new UserInputManager(this, new StandaloneUserInputHandler(this));
             this.cameraManager = new CameraManager(
                 this,
@@ -179,9 +179,10 @@ export class StandaloneGameScene extends DirtyScene {
         this.userInputManager?.destroy();
         this.cameraManager?.destroy();
         this.mapEditorModeManager?.destroy();
-        this.pathfindingManager?.cleanup();
+        this.pathfinder?.destroy();
         this.outlineManager?.clear();
-        this.usernameDomLayer?.destroy();
+        this.CurrentPlayer?.destroy();
+        this.usernameLayer?.destroy();
     }
 
     public async flushPersistence(): Promise<void> {
@@ -212,8 +213,8 @@ export class StandaloneGameScene extends DirtyScene {
         return this.mapEditorModeManager;
     }
 
-    public getPathfindingManager(): PathfindingManager {
-        return this.pathfindingManager;
+    public getPathfinder(): CharacterPathfinder {
+        return this.pathfinder;
     }
 
     public getEntityById(entityId: string): Entity | undefined {
@@ -302,10 +303,6 @@ export class StandaloneGameScene extends DirtyScene {
         return this.outlineManager;
     }
 
-    public getRemotePlayersRepository(): { getPlayers(): Map<number, { getPosition(): Position }> } {
-        return { getPlayers: () => new Map<number, { getPosition(): Position }>() };
-    }
-
     public handleMouseWheel(deltaY: number): void {
         let zoomFactor = Math.exp(((-deltaY * Math.log(2)) / 100) * MOUSE_WHEEL_ZOOM_RATE);
         zoomFactor = Phaser.Math.Clamp(zoomFactor, 0.1, 10);
@@ -316,24 +313,9 @@ export class StandaloneGameScene extends DirtyScene {
         this.cameraManager.zoomByFactor(zoomFactor, duration);
     }
 
-    public async moveTo(
-        position: Position,
-        tryFindingNearestAvailable = false,
-        speed: number | undefined = undefined,
-    ): Promise<{ x: number; y: number; cancelled: boolean }> {
-        this.pathfindingManager.setCollisionGrid(this.gameMapFrontWrapper.getCollisionGrid({ emitMapChangedEvent: false }));
-        const path = await this.pathfindingManager.findPathFromGameCoordinates(
-            { x: this.CurrentPlayer.x, y: this.CurrentPlayer.y },
-            position,
-            tryFindingNearestAvailable,
-        );
-        if (path.length === 0) {
-            throw new Error("No path found");
-        }
-        return this.CurrentPlayer.setPathToFollow(path, speed ?? this.CurrentPlayer.walkingSpeed);
+    public async moveTo(position: Position, tryFindingNearestAvailable = false): Promise<CharacterMoveResult> {
+        return this.CurrentPlayer.moveToPosition(position, tryFindingNearestAvailable);
     }
-
-    public async walkToPersonalDesk(): Promise<void> {}
 
     public playSound(key: string, volume?: number): void {
         if (this.sound.get(key)) {
@@ -445,19 +427,22 @@ export class StandaloneGameScene extends DirtyScene {
         }
         const textures = lazyLoadPlayerCharacterTextures(this.superLoad, this.characterTextures);
         const startPosition = this.computeStartPosition();
-        this.CurrentPlayer = new Player(
+        this.CurrentPlayer = new LocalPlayer(
             this,
-            startPosition.x,
-            startPosition.y,
-            this.playerName,
-            textures,
-            this.context.defaultSpawn?.direction ?? Direction.DOWN,
-            false,
-            undefined,
+            {
+                id: "local-player",
+                name: this.playerName,
+                x: startPosition.x,
+                y: startPosition.y,
+                texturesPromise: textures,
+                direction: this.context.defaultSpawn?.direction ?? Direction.DOWN,
+                movementConfig: DEFAULT_LOCAL_PLAYER_MOVEMENT,
+            },
+            this.pathfinder,
         );
         this.createCollisionWithPlayer();
         this.cameraManager.startFollowPlayer(this.CurrentPlayer, 0);
-        this.CurrentPlayer.on(hasMovedEventName, (event: HasPlayerMovedInterface) => {
+        this.CurrentPlayer.on(characterMovedEventName, (event: CharacterMovedEvent) => {
             this.handleCurrentPlayerHasMovedEvent(event);
         });
         this.gameMapFrontWrapper.setPosition(startPosition.x, startPosition.y);
@@ -486,7 +471,7 @@ export class StandaloneGameScene extends DirtyScene {
         }
     }
 
-    private handleCurrentPlayerHasMovedEvent(event: HasPlayerMovedInterface): void {
+    private handleCurrentPlayerHasMovedEvent(event: CharacterMovedEvent): void {
         this.gameMapFrontWrapper.setPosition(event.x, event.y);
         this.markDirty();
     }

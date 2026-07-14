@@ -1,10 +1,4 @@
-import type {
-    DeleteCustomEntityCommandDto,
-    EntityDataProperties,
-    EntityPrefab,
-    ModifyCustomEntityCommandDto,
-    UploadEntityCommandDto,
-} from "@workadventure/map-editor";
+import type { EntityDataProperties, EntityPrefab } from "@workadventure/map-editor";
 import { writable } from "svelte/store";
 
 export type MapEditorEntityToolMode = "ADD" | "EDIT";
@@ -18,18 +12,6 @@ export const mapEditorEntityModeStore = writable<MapEditorEntityToolMode>("ADD")
 export const mapEditorSelectedEntityPrefabStore = writable<EntityPrefab | undefined>(undefined);
 
 export const mapEditorCopiedEntityDataPropertiesStore = writable<EntityDataProperties | undefined>(undefined);
-
-export const mapEditorEntityUploadEventStore = writable<
-    Omit<UploadEntityCommandDto, "type" | "commandId" | "sceneId"> | undefined
->(undefined);
-
-export const mapEditorModifyCustomEntityEventStore = writable<
-    Omit<ModifyCustomEntityCommandDto, "type" | "commandId" | "sceneId"> | undefined
->(undefined);
-
-export const mapEditorDeleteCustomEntityEventStore = writable<
-    Omit<DeleteCustomEntityCommandDto, "type" | "commandId" | "sceneId"> | undefined
->(undefined);
 
 export const mapEditorEntityFileDroppedStore = writable<boolean>(false);
 

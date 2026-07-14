@@ -2,18 +2,14 @@
   "name": "workadventure",
   "private": true,
   "devDependencies": {
-    "husky": "^9.1.7",
     "typescript": "^5.9.3"
-  },
-  "scripts": {
-    "prepare": "husky install || echo 'Husky not found. Maybe you are installing only a subproject.'",
-    "e2e:report": "npm exec --workspace=@workadventure/e2e-report -- tsx src/cli.ts"
   },
   "workspaces": [
     "play",
-    "libs/*",
-    "play/packages/iframe-api-typings",
-    "tests",
-    "contrib/tools/e2e-report"
+    "libs/game-model",
+    "libs/map-editor",
+    "libs/math-utils",
+    "libs/shared-utils",
+    "libs/tailwind"
   ]
 }

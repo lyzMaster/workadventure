@@ -17,7 +17,7 @@ import {
 import { get } from "svelte/store";
 import { Entity, EntityEvent } from "../../ECS/Entity";
 import { TexturesHelper } from "../../Helpers/TexturesHelper";
-import type { MapEditorSceneContext } from "../SceneContext";
+import type { MapEditorSceneContext } from "../MapEditorSceneContext";
 import { EditorToolName } from "../MapEditor/EditorToolName";
 import type { GameMapFrontWrapper } from "./GameMapFrontWrapper";
 

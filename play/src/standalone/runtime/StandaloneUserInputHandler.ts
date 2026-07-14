@@ -3,10 +3,25 @@ import { get } from "svelte/store";
 import type { UserInputHandlerInterface } from "../../front/Interfaces/UserInputHandlerInterface";
 import { mapEditorModeStore } from "../../front/Stores/MapEditorCoreStore";
 import type { Shortcut } from "../../front/Phaser/UserInput/UserInputManager";
-import type { StandaloneGameScene } from "./StandaloneGameScene";
+import type { CameraManager } from "../../front/Phaser/Game/CameraManager";
+import type { MapEditorRuntimeController } from "../../front/Phaser/Game/MapEditor/MapEditorController";
 
 import Pointer = Phaser.Input.Pointer;
 import GameObject = Phaser.GameObjects.GameObject;
+
+export interface StandaloneInputHost {
+    readonly CurrentPlayer?: { rotate(): void };
+    readonly input: Phaser.Input.InputPlugin;
+    readonly userInputManager: {
+        isControlsEnabled: boolean;
+        isRightClickEnabled: boolean;
+    };
+
+    handleMouseWheel(deltaY: number): void;
+    moveTo(position: { x: number; y: number }, tryFindingNearestAvailable?: boolean): Promise<unknown>;
+    getCameraManager(): CameraManager;
+    getMapEditorModeManager(): MapEditorRuntimeController;
+}
 
 export class StandaloneUserInputHandler implements UserInputHandlerInterface {
     public shortcuts: Shortcut[] = [
@@ -14,7 +29,7 @@ export class StandaloneUserInputHandler implements UserInputHandlerInterface {
         { key: "R", description: "Rotate player" },
     ];
 
-    public constructor(private readonly scene: StandaloneGameScene) {}
+    public constructor(private readonly scene: StandaloneInputHost) {}
 
     public handleMouseWheelEvent(
         pointer: Pointer,

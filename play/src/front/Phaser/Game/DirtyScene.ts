@@ -1,5 +1,4 @@
 import * as Phaser from "phaser";
-import { ResizableScene } from "../Login/ResizableScene";
 import { SKIP_RENDER_OPTIMIZATIONS } from "../../Enum/EnvironmentVariable";
 
 import GameObject = Phaser.GameObjects.GameObject;
@@ -7,7 +6,7 @@ import GameObject = Phaser.GameObjects.GameObject;
 /**
  * A scene that can track its dirty/pristine state.
  */
-export abstract class DirtyScene extends ResizableScene {
+export abstract class DirtyScene extends Phaser.Scene {
     private isAlreadyTracking = false;
     protected dirty = true;
     private objectListChanged = true;

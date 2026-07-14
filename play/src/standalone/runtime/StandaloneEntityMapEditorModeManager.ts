@@ -1,7 +1,7 @@
 import type { Command, LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
-import type { MapEditorSceneContext } from "../../front/Phaser/Game/SceneContext";
+import type { MapEditorSceneContext } from "../../front/Phaser/Game/MapEditorSceneContext";
 import { mapEditorModeStore, mapEditorSelectedToolStore } from "../../front/Stores/MapEditorCoreStore";
 import { mapEditorSelectedEntityIdStore } from "../../front/Stores/MapEditorEntityEditorStore";
 import { EntityEditorTool } from "../../front/Phaser/Game/MapEditor/Tools/EntityEditorTool";

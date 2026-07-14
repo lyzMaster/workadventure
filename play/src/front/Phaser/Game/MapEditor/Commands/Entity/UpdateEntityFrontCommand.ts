@@ -2,7 +2,7 @@ import type { UpdateEntityCommandDto, WamFile, WAMEntityData, WAMFileFormat } fr
 import { UpdateEntityCommand } from "@workadventure/map-editor";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 import type { Entity } from "../../../../ECS/Entity";
-import type { MapEditorSceneContext } from "../../../SceneContext";
+import type { MapEditorSceneContext } from "../../../MapEditorSceneContext";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
 import { TexturesHelper } from "../../../../Helpers/TexturesHelper";
 

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import * as Phaser from "phaser";
 import { SKIP_RENDER_OPTIMIZATIONS } from "../../Enum/EnvironmentVariable";
-import { ResizableScene } from "../Login/ResizableScene";
+import { isResizableSceneLike } from "./ResizableSceneLike";
 
 /**
  * A specialization of the main Phaser Game scene.
@@ -19,7 +19,7 @@ export class Game extends Phaser.Game {
 
         this.scale.on(Phaser.Scale.Events.RESIZE, () => {
             for (const scene of this.scene.getScenes(true)) {
-                if (scene instanceof ResizableScene) {
+                if (isResizableSceneLike(scene)) {
                     scene.onResize();
                 }
             }

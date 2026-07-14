@@ -1,4 +1,3 @@
-//import { getEnvConfig } from "@geprog/vite-plugin-env-config/getEnvConfig";
 import type { FrontConfigurationInterface } from "../../common/FrontConfigurationInterface";
 
 declare global {

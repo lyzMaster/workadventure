@@ -18,6 +18,34 @@ export interface CharacterPosition {
     moving: boolean;
 }
 
+export type CharacterId = string;
+
+export type CharacterMotionState = "idle" | "walking" | "speaking" | "thinking";
+
+export interface CharacterMovementConfig {
+    walkingSpeed: number;
+    runningMultiplier: number;
+}
+
+export interface CharacterSnapshot {
+    id: CharacterId;
+    name: string;
+    sceneId: string;
+    position: CharacterPosition;
+    motionState: CharacterMotionState;
+}
+
+export type CharacterMoveResult =
+    | {
+          ok: true;
+          character: CharacterSnapshot;
+      }
+    | {
+          ok: false;
+          code: "path_not_found" | "cancelled" | "timeout" | "destroyed" | "invalid_target";
+          message: string;
+      };
+
 export interface CharacterTexture {
     id: string;
     url: string;

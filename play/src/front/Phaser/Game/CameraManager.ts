@@ -1,12 +1,11 @@
 import * as Phaser from "phaser";
 import { mapEditorModeStore } from "../../Stores/MapEditorCoreStore";
 import { Easing } from "../../types";
-import type { Character } from "../Entity/Character";
-import { hasMovedEventName, type Player } from "../Player/Player";
 import type { WaScaleManager, WaScaleManagerFocusTarget } from "../Services/WaScaleManager";
 import { WaScaleManagerEvent } from "../Services/WaScaleManager";
 import type { ActiveEventList } from "../UserInput/UserInputManager";
 import { UserInputEvent } from "../UserInput/UserInputManager";
+import { characterMovedEventName } from "../../../standalone/characters/CharacterEvents";
 import {
     SMOOTH_BUTTON_ZOOM_DURATION,
     SMOOTH_BUTTON_ZOOM_TARGET_EPSILON,
@@ -14,7 +13,6 @@ import {
     getRetargetedButtonZoomModifier,
     getSmoothButtonZoomModifier,
 } from "./CameraZoomUtils";
-import type { MapEditorSceneContext } from "./SceneContext";
 
 import Clamp = Phaser.Math.Clamp;
 import EventEmitter = Phaser.Events.EventEmitter;
@@ -58,6 +56,19 @@ type Box = {
     yEnd: number;
 };
 
+export interface CameraFollowTarget extends Phaser.Events.EventEmitter {
+    x: number;
+    y: number;
+}
+
+export interface CameraManagerSceneContext extends Phaser.Scene {
+    CurrentPlayer?: CameraFollowTarget;
+    MapPlayersByKey?: Pick<Map<number, CameraFollowTarget>, "get">;
+    markDirty(): void;
+    sendViewportToServer?(): void;
+    reposition?(): void;
+}
+
 /**
  * The CameraManager is responsible for managing the camera in the game.
  * It allows to set the camera to follow the player, to focus on a specific point or to be in exploration mode.
@@ -80,7 +91,7 @@ export class CameraManager extends EventEmitter {
     private smoothButtonZoomElapsedMs = 0;
     private continuousButtonZoomFactorPerSecond: number | undefined;
 
-    private playerToFollow?: Player | Character;
+    private playerToFollow?: CameraFollowTarget;
     private zoomLocked: boolean;
 
     private readonly EDITOR_MODE_SCROLL_SPEED: number = 5;
@@ -102,7 +113,7 @@ export class CameraManager extends EventEmitter {
     private targetFollowOffset: { x: number; y: number } | undefined;
 
     constructor(
-        private scene: MapEditorSceneContext,
+        private scene: CameraManagerSceneContext,
         private mapSize: { width: number; height: number },
         waScaleManager: WaScaleManager,
     ) {
@@ -168,11 +179,7 @@ export class CameraManager extends EventEmitter {
         return this.camera;
     }
 
-    private animateToFocus(
-        target: Character | { x: number; y: number },
-        duration: number,
-        callback?: () => void,
-    ): void {
+    private animateToFocus(target: CameraFollowTarget | { x: number; y: number }, duration: number, callback?: () => void): void {
         this.cameraAnimation?.onInterrupt();
 
         if (duration === 0) {
@@ -242,7 +249,7 @@ export class CameraManager extends EventEmitter {
         this.animateToFocus(setTo, duration, () => {});
         this.animateToZoomLevel(currentZoomModifier + zoomModifierChange, duration);
 
-        this.playerToFollow?.once(hasMovedEventName, () => {
+        this.playerToFollow?.once(characterMovedEventName, () => {
             if (this.playerToFollow) {
                 this.startFollowPlayer(this.playerToFollow, duration);
             }
@@ -271,7 +278,7 @@ export class CameraManager extends EventEmitter {
         this.animateToZoomLevel(currentZoomModifier + zoomModifierChange, duration);
     }
 
-    public leaveFocusMode(player: Player, duration = 0): void {
+    public leaveFocusMode(player: CameraFollowTarget, duration = 0): void {
         this.waScaleManager.setFocusTarget();
         this.startFollowPlayer(player, duration);
         this.restoreZoom(duration);
@@ -308,7 +315,7 @@ export class CameraManager extends EventEmitter {
         }
     }
 
-    public startFollowPlayer(player: Player | Character, duration = 0): void {
+    public startFollowPlayer(player: CameraFollowTarget, duration = 0): void {
         this.playerToFollow = player;
 
         this.animateToFocus(player, duration, () => {});
@@ -826,7 +833,7 @@ export class CameraManager extends EventEmitter {
         this.scene.markDirty();
     }
 
-    get playerFollowing(): Player | Character | undefined {
+    get playerFollowing(): CameraFollowTarget | undefined {
         return this.playerToFollow;
     }
 }

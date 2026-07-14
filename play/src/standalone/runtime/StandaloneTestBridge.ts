@@ -95,7 +95,14 @@ export function installStandaloneTestBridge(
         getEntities: () => listEntities(scene),
         movePlayer: async ({ x, y }) => {
             const result = await scene.moveTo({ x, y }, false);
-            return { x: result.x, y: result.y, cancelled: result.cancelled };
+            if (!result.ok) {
+                throw new Error(result.message);
+            }
+            return {
+                x: result.character.position.x,
+                y: result.character.position.y,
+                cancelled: false,
+            };
         },
         openFurnitureEditor: async () => {
             scene.openFurnitureEditor();

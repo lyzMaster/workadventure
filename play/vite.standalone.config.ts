@@ -1,12 +1,8 @@
-import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import { svelte, vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
-import Icons from "unplugin-icons/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({
     server: {
@@ -30,26 +26,9 @@ export default defineConfig({
         disableViteClientWebSocket(),
         removeViteClient(),
         tailwindcss(),
-        mediapipeWorkaround(),
-        nodePolyfills({
-            include: ["events", "buffer"],
-            globals: { Buffer: true },
-        }),
         svelte({ preprocess: vitePreprocess() }),
-        Icons({ compiler: "svelte" }),
         tsconfigPaths(),
     ],
-    resolve: {
-        alias: {
-            events: "events",
-            "@wa-icons": fileURLToPath(new URL("./src/front/Components/Icons.ts", import.meta.url)),
-            "@wa-modals": fileURLToPath(new URL("./src/front/Components/Modal/modalManager.ts", import.meta.url)),
-        },
-    },
-    optimizeDeps: {
-        exclude: ["svelte-modals", "@mediapipe/selfie_segmentation"],
-        esbuildOptions: { define: { global: "globalThis" } },
-    },
 });
 
 function disableViteClientWebSocket(): Plugin {
@@ -94,21 +73,6 @@ function removeViteClient() {
             handler(html: string) {
                 return html.replace(/<script type="module" src="\/@vite\/client"><\/script>/, "");
             },
-        },
-    };
-}
-
-function mediapipeWorkaround() {
-    return {
-        name: "standalone-mediapipe-workaround",
-        load(id: string) {
-            const filePath = id.split("?")[0];
-            if (path.basename(filePath) !== "selfie_segmentation.js" || !fs.existsSync(filePath)) {
-                return null;
-            }
-            return {
-                code: `${fs.readFileSync(filePath, "utf-8")}\nexport const SelfieSegmentation = globalThis.SelfieSegmentation;\n`,
-            };
         },
     };
 }
