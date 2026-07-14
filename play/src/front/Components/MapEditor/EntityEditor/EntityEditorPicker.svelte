@@ -3,7 +3,6 @@
     import { onDestroy } from "svelte";
     import { get } from "svelte/store";
     import { LL } from "../../../../i18n/i18n-svelte";
-    import { gameManager } from "../../../Phaser/Game/GameManager";
     import type { EntityVariant } from "../../../Phaser/Game/MapEditor/Entities/EntityVariant";
     import type { CategoryTag, SelectableTag } from "../../../Stores/MapEditorStore";
     import {
@@ -16,7 +15,7 @@
     } from "../../../Stores/MapEditorStore";
     import Input from "../../Input/Input.svelte";
     import ButtonClose from "../../Input/ButtonClose.svelte";
-    import type { GameScene } from "../../../Phaser/Game/GameScene";
+    import type { MapEditorSceneContext } from "../../../Phaser/Game/SceneContext";
     import CustomEntityEditionForm from "./CustomEntityEditionForm/CustomEntityEditionForm.svelte";
     import EntitiesGrid from "./EntitiesGrid.svelte";
     import EntityImage from "./EntityItem/EntityImage.svelte";
@@ -28,10 +27,10 @@
 
     interface Props {
         allowUpload?: boolean;
-        scene?: GameScene;
+        scene: MapEditorSceneContext;
     }
 
-    let { allowUpload = true, scene = gameManager.getCurrentGameScene() }: Props = $props();
+    let { allowUpload = true, scene }: Props = $props();
 
     const getEntitiesCollectionsManager = () => scene.getEntitiesCollectionsManager();
     const entitiesPrefabsVariants = $derived(getEntitiesCollectionsManager().getEntitiesPrefabsVariantStore());

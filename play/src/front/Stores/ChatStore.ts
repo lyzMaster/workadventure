@@ -1,8 +1,8 @@
 import { writable } from "svelte/store";
+export { chatInputFocusStore } from "./ChatFocusStore";
 
 export const chatZoneLiveStore = writable(false);
 export const chatVisibilityStore = writable(false);
-export const chatInputFocusStore = writable(false);
 
 // Call "forceRefresh" to force the refresh of the chat iframe.
 function createForceRefreshChatStore() {

@@ -3,7 +3,7 @@ import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
 import { touchScreenManager } from "../../Touch/TouchScreenManager";
 import { MobileJoystick } from "../Components/MobileJoystick";
-import { enableUserInputsStore } from "../../Stores/UserInputStore";
+import { baseEnableUserInputsStore } from "../../Stores/UserInputBaseStore";
 import type { UserInputHandlerInterface } from "../../Interfaces/UserInputHandlerInterface";
 import { mapEditorModeStore } from "../../Stores/MapEditorStore";
 import LL from "../../../i18n/i18n-svelte";
@@ -101,7 +101,7 @@ export class UserInputManager {
             this.initVirtualJoystick();
         }
 
-        this.enableUserInputsStoreUnsubscribe = enableUserInputsStore.subscribe((enable) => {
+        this.enableUserInputsStoreUnsubscribe = baseEnableUserInputsStore.subscribe((enable) => {
             if (enable) {
                 this.restoreControls("store");
             } else {

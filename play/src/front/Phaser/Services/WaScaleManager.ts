@@ -1,6 +1,4 @@
 import * as Phaser from "phaser";
-import { coWebsiteManager } from "../../Stores/CoWebsiteStore";
-import type { Game } from "../Game/Game";
 import { ResizableScene } from "../Login/ResizableScene";
 import { HdpiManager } from "./HdpiManager";
 
@@ -13,11 +11,12 @@ export enum WaScaleManagerEvent {
 }
 
 export type WaScaleManagerFocusTarget = { x: number; y: number; width?: number; height?: number };
+type ManagedPhaserGame = Phaser.Game & { markDirty(): void };
 
 export class WaScaleManager {
     private hdpiManager: HdpiManager;
     private scaleManager: ScaleManager | undefined;
-    private game!: Game;
+    private game!: ManagedPhaserGame;
     private actualZoom = 1;
     private _saveZoom = 1;
     private lastEmittedZoomModifier: number | undefined;
@@ -47,7 +46,7 @@ export class WaScaleManager {
         this.game.events.emit(WaScaleManagerEvent.ZoomChanged, zoomModifier);
     }
 
-    public setGame(game: Game): void {
+    public setGame(game: ManagedPhaserGame): void {
         this.scaleManager = game.scale;
         this.game = game;
         this.lastEmittedZoomModifier = this.hdpiManager.zoomModifier;
@@ -57,7 +56,8 @@ export class WaScaleManager {
         if (this.scaleManager === undefined) {
             return;
         }
-        const { width, height } = coWebsiteManager.getGameSize();
+        const width = Math.max(1, window.innerWidth);
+        const height = Math.max(1, window.innerHeight);
         const devicePixelRatio = window.devicePixelRatio ?? 1;
         const { game: gameSize, real: realSize } = this.hdpiManager.getOptimalGameSize({
             width: width * devicePixelRatio,
@@ -127,7 +127,8 @@ export class WaScaleManager {
     }
 
     public getTargetZoomModifierFor(viewportWidth: number, viewportHeight: number) {
-        const { width: gameWidth, height: gameHeight } = coWebsiteManager.getGameSize();
+        const gameWidth = Math.max(1, window.innerWidth);
+        const gameHeight = Math.max(1, window.innerHeight);
         const devicePixelRatio = window.devicePixelRatio ?? this.hdpiManager.maxZoomOut;
 
         const { real: realSize } = this.hdpiManager.getOptimalGameSize({

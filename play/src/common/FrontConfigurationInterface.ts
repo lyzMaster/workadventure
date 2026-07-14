@@ -1,4 +1,4 @@
-import type { OpidWokaNamePolicy } from "@workadventure/messages";
+type OpidWokaNamePolicy = "force_opid" | "allow_override_opid" | "allow_override_opid_even_if_empty";
 
 export interface FrontConfigurationInterface {
     DEBUG_MODE: boolean;

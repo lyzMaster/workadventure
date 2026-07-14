@@ -1,11 +1,11 @@
 import type { LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
-import type { GameScene } from "../../GameScene";
+import type { MapEditorSceneContext } from "../../SceneContext";
 import type { MapEditorModeManager } from "../MapEditorModeManager";
 import { MapEditorTool } from "./MapEditorTool";
 
 export class FloorEditorTool extends MapEditorTool {
-    private scene: GameScene;
+    private scene: MapEditorSceneContext;
     private mapEditorModeManager: MapEditorModeManager;
 
     constructor(mapEditorModeManager: MapEditorModeManager) {

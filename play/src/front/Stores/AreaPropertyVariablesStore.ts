@@ -1,11 +1,23 @@
 import { writable } from "svelte/store";
-import type { AreaPropertyVariablesManager } from "../Phaser/Game/AreaPropertyVariablesManager";
+
+type AreaPropertyVariableChange = {
+    areaId: string;
+    key: string;
+};
+
+export type AreaPropertyVariablesController = {
+    variableChanges: {
+        subscribe(run: (value: AreaPropertyVariableChange | undefined) => void): () => void;
+    };
+    getVariable(areaId: string, propertyId: string, key: string): unknown;
+    setVariable(areaId: string, propertyId: string, key: string, value: unknown): void;
+};
 
 /**
  * Store that holds the AreaPropertyVariablesManager instance.
  * Set when the GameScene is initialized.
  */
-export const areaPropertyVariablesManagerStore = writable<AreaPropertyVariablesManager | undefined>(undefined);
+export const areaPropertyVariablesManagerStore = writable<AreaPropertyVariablesController | undefined>(undefined);
 
 /**
  * Helper function to set an area property variable.
@@ -37,8 +49,8 @@ export function setAreaPropertyLockState(areaId: string, propertyId: string, loc
 }
 
 // Helper to get current manager value
-function getCurrentManager(): AreaPropertyVariablesManager | undefined {
-    let manager: AreaPropertyVariablesManager | undefined;
+function getCurrentManager(): AreaPropertyVariablesController | undefined {
+    let manager: AreaPropertyVariablesController | undefined;
     const unsubscribe = areaPropertyVariablesManagerStore.subscribe((m) => {
         manager = m;
     });

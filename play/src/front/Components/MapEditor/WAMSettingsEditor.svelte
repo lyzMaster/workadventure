@@ -4,7 +4,7 @@
     import { fly } from "svelte/transition";
     import { LL } from "../../../i18n/i18n-svelte";
     import { gameManager } from "../../Phaser/Game/GameManager";
-    import { EditorToolName } from "../../Phaser/Game/MapEditor/MapEditorModeManager";
+    import { EditorToolName } from "../../Phaser/Game/MapEditor/EditorToolName";
     import {
         mapEditorWamSettingsEditorToolCurrentMenuItemStore,
         WAM_SETTINGS_EDITOR_TOOL_MENU_ITEM,

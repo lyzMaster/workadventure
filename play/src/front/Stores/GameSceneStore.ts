@@ -2,8 +2,7 @@ import { writable } from "svelte/store";
 import type { GameScene } from "../Phaser/Game/GameScene";
 import type { ExtensionModule } from "../ExternalModule/ExtensionModule";
 import { waitForStoreValue } from "./Utils/waitForStoreValue";
-
-export const gameSceneIsLoadedStore = writable(false);
+export { gameSceneIsLoadedStore } from "./GameSceneLoadedStore";
 
 export const gameSceneStore = writable<GameScene | undefined>(undefined);
 

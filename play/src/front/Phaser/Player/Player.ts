@@ -2,17 +2,15 @@ import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
 import type { CancelablePromise } from "cancelable-promise";
 import { Direction, rotateDirectionClockwise, type Direction as DirectionType } from "@workadventure/game-model";
-import type { GameScene } from "../Game/GameScene";
+import type { CharacterSceneContext } from "../Game/SceneContext";
 import type { ActiveEventList } from "../UserInput/UserInputManager";
 import { UserInputEvent } from "../UserInput/UserInputManager";
 import { Character } from "../Entity/Character";
 
 import { userMovingStore } from "../../Stores/GameStore";
-import { followStateStore, followRoleStore, followUsersStore } from "../../Stores/FollowStore";
+import { followStateStore, followRoleStore, followUsersStore } from "../../Stores/FollowStateStore";
 import { WOKA_SPEED } from "../../Enum/EnvironmentVariable";
 import { visibilityStore } from "../../Stores/VisibilityStore";
-import { passStatusToOnline } from "../../Rules/StatusRules/statusChangerFunctions";
-import { localUserStore } from "../../Connection/LocalUserStore";
 
 export const hasMovedEventName = "hasMoved";
 export const startMovingEventName = "startMoving";
@@ -23,7 +21,7 @@ export class Player extends Character {
     private isMoving = false;
 
     constructor(
-        Scene: GameScene,
+        Scene: CharacterSceneContext,
         x: number,
         y: number,
         name: string,
@@ -78,14 +76,14 @@ export class Player extends Character {
     }
 
     public sendFollowRequest() {
-        this.scene.connection?.emitFollowRequest();
+        this.scene.connection?.emitFollowRequest?.();
         followRoleStore.set("leader");
         followStateStore.set("active");
     }
 
     public startFollowing() {
         followStateStore.set("active");
-        this.scene.connection?.emitFollowConfirmation(get(followUsersStore)[0]);
+        this.scene.connection?.emitFollowConfirmation?.(get(followUsersStore)[0]);
     }
 
     public setPathToFollow(
@@ -174,7 +172,7 @@ export class Player extends Character {
         // Find followed WOKA and abort following if we lost it
         const player = this.scene.MapPlayersByKey.get(get(followUsersStore)[0]);
         if (!player) {
-            this.scene.connection?.emitFollowAbort();
+            this.scene.connection?.emitFollowAbort?.();
             followStateStore.set("off");
             return [0, 0];
         }
@@ -214,7 +212,6 @@ export class Player extends Character {
                 this._lastDirection = Direction.DOWN;
             }
         }
-        passStatusToOnline();
         this.playAnimation(this._lastDirection, true);
 
         if (this.companion) {
@@ -235,7 +232,6 @@ export class Player extends Character {
     }
 
     protected moveToPathPosition(x: number, y: number): void {
-        passStatusToOnline();
         super.moveToPathPosition(x, y);
     }
 
@@ -257,8 +253,8 @@ export class Player extends Character {
     }
 
     public emitAskPosition(): void {
-        this.scene.connection?.emitAskPosition(
-            localUserStore.getLocalUser()?.uuid ?? "",
+        this.scene.connection?.emitAskPosition?.(
+            "",
             this.scene.roomUrl,
             "locate",
         );

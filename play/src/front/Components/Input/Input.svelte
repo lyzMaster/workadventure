@@ -2,7 +2,7 @@
     import type { Snippet } from "svelte";
     import { onDestroy } from "svelte";
     import { LL } from "../../../i18n/i18n-svelte";
-    import { inputFormFocusStore } from "../../Stores/UserInputStore";
+    import { inputFormFocusStore } from "../../Stores/UserInputBaseStore";
     import InfoButton from "./InfoButton.svelte";
 
     interface Props {

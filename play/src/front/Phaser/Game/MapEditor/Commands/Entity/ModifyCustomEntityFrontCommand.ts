@@ -25,6 +25,12 @@ export class ModifyCustomEntityFrontCommand extends ModifyCustomEntityCommand im
 
     execute(): Promise<void> {
         const { id, name, tags, depthOffset, collisionGrid } = this.modifyCustomEntityMessage;
+        if (!id) {
+            throw new Error("Cannot modify a custom entity without an id");
+        }
+        if (name === undefined || tags === undefined) {
+            throw new Error(`Cannot modify custom entity "${id}" without name and tags`);
+        }
         this.entitiesCollectionManager.modifyCustomEntity(id, name, tags, depthOffset, collisionGrid);
         if (depthOffset !== undefined) {
             this.entitiesManager.updateEntitiesDepth(id, depthOffset);

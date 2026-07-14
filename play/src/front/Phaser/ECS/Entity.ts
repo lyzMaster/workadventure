@@ -16,11 +16,8 @@ import type { ActionsMenuAction } from "../../Stores/ActionsMenuStore";
 import { actionsMenuStore } from "../../Stores/ActionsMenuStore";
 import { mapEditorModeStore } from "../../Stores/MapEditorStore";
 import { createColorStore } from "../../Stores/OutlineColorStore";
-import { getImageCoWebsiteTitle, ImageCoWebsite, isImageCoWebsiteUrl } from "../../WebRtc/CoWebsite/ImageCoWebsite";
-import { SimpleCoWebsite } from "../../WebRtc/CoWebsite/SimpleCoWebsite";
-import { coWebsites } from "../../Stores/CoWebsiteStore";
 import type { ActivatableInterface } from "../Game/ActivatableInterface";
-import { GameScene } from "../Game/GameScene";
+import type { MapEditorSceneContext } from "../Game/SceneContext";
 import type { OutlineableInterface } from "../Game/OutlineableInterface";
 import { SpeechDomElement } from "../Entity/SpeechDomElement";
 import LL from "../../../i18n/i18n-svelte";
@@ -61,7 +58,7 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
     private debugActivationZoneCircle: Graphics | null = null;
 
     constructor(
-        scene: GameScene,
+        scene: MapEditorSceneContext,
         public readonly entityId: string,
         data: WAMEntityData,
         prefab: EntityPrefab,
@@ -122,11 +119,11 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
     }
 
     public get canEdit(): boolean {
-        return (this.scene as GameScene).getEntityPermissions().canEdit(this.getCenter());
+        return (this.scene as MapEditorSceneContext).getEntityPermissions().canEdit(this.getCenter());
     }
 
     public get canRead(): boolean {
-        return (this.scene as GameScene).getEntityPermissions().canRead(this.getCenter());
+        return (this.scene as MapEditorSceneContext).getEntityPermissions().canRead(this.getCenter());
     }
 
     /**
@@ -406,11 +403,7 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
     }
 
     private updateOutline() {
-        if (this.scene instanceof GameScene) {
-            this.scene.getOutlineManager().update(this);
-        } else {
-            throw new Error("Not the Game Scene");
-        }
+        (this.scene as MapEditorSceneContext).getOutlineManager().update(this);
     }
 
     private getDefaultActionsMenuActions(): ActionsMenuAction[] {
@@ -451,31 +444,15 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
                     // TODO add description to the empty interaction
                     if (!property.link) break;
                     const link = property.link;
-                    const newTab = property.newTab;
                     actions.push({
                         actionName: property.buttonLabel ?? "",
                         protected: true,
                         priority: 1,
                         callback: () => {
-                            if (newTab) {
-                                this.emit(EntityEvent.PropertyActivated, {
-                                    propertyName: GameMapProperties.OPEN_TAB,
-                                    propertyValue: link,
-                                });
-                            } else {
-                                const coWebsite = new SimpleCoWebsite(
-                                    new URL(link),
-                                    property.allowAPI,
-                                    property.policy,
-                                    property.width,
-                                    property.closable,
-                                );
-                                try {
-                                    coWebsites.add(coWebsite);
-                                } catch (error) {
-                                    console.error("Error during loading a co-website: " + coWebsite.getUrl(), error);
-                                }
-                            }
+                            this.emit(EntityEvent.PropertyActivated, {
+                                propertyName: GameMapProperties.OPEN_TAB,
+                                propertyValue: link,
+                            });
                             actionsMenuStore.clear();
                         },
                     });
@@ -500,42 +477,17 @@ export class Entity extends Image implements ActivatableInterface, OutlineableIn
                 }
                 case "openFile": {
                     if (!property.link) break;
-                    const newTab = property.newTab;
                     actions.push({
                         actionName: property.buttonLabel ?? "",
                         protected: true,
                         priority: 1,
                         callback: async () => {
-                            const answer = await (this.scene as GameScene).connection?.queryMapStorageJwtToken();
-                            const link = property.link + (answer && answer.jwt ? `?token=${answer.jwt}` : "");
+                            const link = property.link;
 
-                            if (newTab) {
-                                this.emit(EntityEvent.PropertyActivated, {
-                                    propertyName: GameMapProperties.OPEN_TAB,
-                                    propertyValue: link,
-                                });
-                            } else {
-                                const url = new URL(link);
-                                const coWebsite = isImageCoWebsiteUrl(url)
-                                    ? new ImageCoWebsite(
-                                          url,
-                                          property.name ?? getImageCoWebsiteTitle(url),
-                                          property.width,
-                                          property.closable,
-                                      )
-                                    : new SimpleCoWebsite(
-                                          url,
-                                          false, // No need for API in file viewer
-                                          property.policy,
-                                          property.width,
-                                          property.closable,
-                                      );
-                                try {
-                                    coWebsites.add(coWebsite);
-                                } catch (error) {
-                                    console.error("Error during loading a co-website: " + coWebsite.getUrl(), error);
-                                }
-                            }
+                            this.emit(EntityEvent.PropertyActivated, {
+                                propertyName: GameMapProperties.OPEN_TAB,
+                                propertyValue: link,
+                            });
                             actionsMenuStore.clear();
                         },
                     });

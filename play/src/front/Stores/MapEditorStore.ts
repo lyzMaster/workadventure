@@ -9,7 +9,7 @@ import type {
 import { writable } from "svelte/store";
 import type { AreaPreview } from "../Phaser/Components/MapEditor/AreaPreview";
 import type { Entity } from "../Phaser/ECS/Entity";
-import type { EditorToolName } from "../Phaser/Game/MapEditor/MapEditorModeManager";
+import type { EditorToolName } from "../Phaser/Game/MapEditor/EditorToolName";
 
 export const mapEditorVisibilityStore = writable<boolean>(true);
 

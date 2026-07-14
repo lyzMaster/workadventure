@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import { AvailabilityStatus } from "@workadventure/game-model";
-import type { GameScene } from "../Game/GameScene";
+import type { CharacterSceneContext } from "../Game/SceneContext";
 import { waScaleManager, WaScaleManagerEvent } from "../Services/WaScaleManager";
 import { UsernameMegaphoneDisplay } from "./UsernameMegaphoneDisplay";
 import { UsernameStatusDisplay } from "./UsernameStatusDisplay";
@@ -46,7 +46,7 @@ export class UsernameDisplay {
     private depth: number = 0;
 
     constructor(
-        private scene: GameScene,
+        private scene: CharacterSceneContext,
         private x: number,
         private y: number,
         playerName: string,
@@ -143,7 +143,7 @@ export class UsernameDisplay {
         this.scene.game.events.off(WaScaleManagerEvent.ZoomChanged, this.onZoomChanged);
     }
 
-    private get gameScene(): GameScene {
+    private get gameScene(): CharacterSceneContext {
         return this.scene;
     }
 

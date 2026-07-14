@@ -2,8 +2,17 @@ import { get } from "svelte/store";
 import { AvailabilityStatus } from "@workadventure/game-model";
 import type { LocalizedString } from "typesafe-i18n";
 import LL from "../../i18n/i18n-svelte";
-import type { StatusInformationInterface } from "../Components/ActionBar/AvailabilityStatus/Interfaces/AvailabilityStatusPropsInterface";
-import type { RequestedStatus } from "../Rules/StatusRules/statusRules";
+
+type RequestedStatus =
+    | typeof AvailabilityStatus.DO_NOT_DISTURB
+    | typeof AvailabilityStatus.BACK_IN_A_MOMENT
+    | typeof AvailabilityStatus.BUSY;
+
+type StatusInformation = {
+    AvailabilityStatus: RequestedStatus | typeof AvailabilityStatus.ONLINE;
+    label: LocalizedString | string;
+    colorHex: string;
+};
 
 const COLORS: Record<AvailabilityStatus, { filling: number; outline: number }> = {
     [AvailabilityStatus.AWAY]: { filling: 0xe9c84e, outline: 0xd3873b },
@@ -38,16 +47,16 @@ export const getStatusLabel = (status: AvailabilityStatus): string => {
 };
 
 export const getStatusInformation = (
-    statusToShow: Array<RequestedStatus | AvailabilityStatus.ONLINE>,
-): Array<StatusInformationInterface> => {
-    const labelStatusMap: Map<RequestedStatus | AvailabilityStatus.ONLINE, LocalizedString> = new Map([
+    statusToShow: Array<RequestedStatus | typeof AvailabilityStatus.ONLINE>,
+): Array<StatusInformation> => {
+    const labelStatusMap: Map<RequestedStatus | typeof AvailabilityStatus.ONLINE, LocalizedString> = new Map([
         [AvailabilityStatus.BACK_IN_A_MOMENT, get(LL).actionbar.status.BACK_IN_A_MOMENT()],
         [AvailabilityStatus.BUSY, get(LL).actionbar.status.BUSY()],
         [AvailabilityStatus.DO_NOT_DISTURB, get(LL).actionbar.status.DO_NOT_DISTURB()],
         [AvailabilityStatus.ONLINE, get(LL).actionbar.status.ONLINE()],
     ]);
 
-    return statusToShow.map((status: RequestedStatus | AvailabilityStatus.ONLINE) => {
+    return statusToShow.map((status: RequestedStatus | typeof AvailabilityStatus.ONLINE) => {
         return {
             AvailabilityStatus: status,
             label: labelStatusMap.get(status) || "",

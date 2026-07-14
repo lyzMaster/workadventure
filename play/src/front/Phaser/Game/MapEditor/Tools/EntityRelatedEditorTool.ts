@@ -2,8 +2,8 @@ import * as Phaser from "phaser";
 import type { EntityPrefab } from "@workadventure/map-editor";
 import type { Unsubscriber } from "svelte/store";
 import { get } from "svelte/store";
-import type { MapEditorModeManager } from "../MapEditorModeManager";
-import type { GameScene } from "../../GameScene";
+import type { MapEditorController } from "../MapEditorController";
+import type { MapEditorSceneContext } from "../../SceneContext";
 import type { EntitiesManager } from "../../GameMap/EntitiesManager";
 import { EntitiesManagerEvent } from "../../GameMap/EntitiesManager";
 import {
@@ -26,8 +26,8 @@ import Image = Phaser.GameObjects.Image;
 
 export abstract class EntityRelatedEditorTool extends MapEditorTool {
     private handleDeleteEntity: (entity: Entity) => void;
-    protected scene: GameScene;
-    protected mapEditorModeManager: MapEditorModeManager;
+    protected scene: MapEditorSceneContext;
+    protected mapEditorModeManager: MapEditorController;
 
     protected entitiesManager: EntitiesManager;
 
@@ -40,7 +40,7 @@ export abstract class EntityRelatedEditorTool extends MapEditorTool {
     protected mapEditorSelectedEntityStoreUnsubscriber: Unsubscriber | undefined;
     protected mapEditorSelectedEntityDraggedStoreUnsubscriber: Unsubscriber | undefined;
 
-    protected constructor(mapEditorModeManager: MapEditorModeManager) {
+    protected constructor(mapEditorModeManager: MapEditorController) {
         super();
         this.mapEditorModeManager = mapEditorModeManager;
         this.scene = this.mapEditorModeManager.getScene();

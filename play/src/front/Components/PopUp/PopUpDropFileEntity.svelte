@@ -20,7 +20,7 @@
     import { isCalendarVisibleStore } from "../../Stores/CalendarStore";
     import { isTodoListVisibleStore } from "../../Stores/TodoListStore";
     import { warningMessageStore } from "../../Stores/ErrorStore";
-    import { EditorToolName } from "../../Phaser/Game/MapEditor/MapEditorModeManager";
+    import { EditorToolName } from "../../Phaser/Game/MapEditor/EditorToolName";
     import PopUpContainer from "./PopUpContainer.svelte";
     import DropFileEntityPicker from "./DropFileEntityPicker.svelte";
 

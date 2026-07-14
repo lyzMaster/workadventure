@@ -1,46 +1,15 @@
-import { derived, writable } from "svelte/store";
-import { menuInputFocusStore } from "./MenuInputFocusStore";
-import { chatInputFocusStore } from "./ChatStore";
-import { showReportScreenStore, userReportEmpty } from "./ShowReportScreenStore";
+import { derived } from "svelte/store";
 import { emoteMenuStore } from "./EmoteStore";
-import { refreshPromptStore } from "./RefreshPromptStore";
-import { mapDeletedPromptStore } from "./MapDeletedPromptStore";
+import {
+    baseEnableUserInputsStore,
+    inputFormFocusStore,
+    mapExplorerSearchinputFocusStore,
+} from "./UserInputBaseStore";
 
-export const inputFormFocusStore = writable(false);
-
-export const mapExplorerSearchinputFocusStore = writable(false);
+export { inputFormFocusStore, mapExplorerSearchinputFocusStore };
 
 //derived from the focus on Menu, ConsoleGlobal, Chat and ...
 export const enableUserInputsStore = derived(
-    [
-        menuInputFocusStore,
-        chatInputFocusStore,
-        showReportScreenStore,
-        inputFormFocusStore,
-        mapExplorerSearchinputFocusStore,
-        emoteMenuStore,
-        refreshPromptStore,
-        mapDeletedPromptStore,
-    ],
-    ([
-        $menuInputFocusStore,
-        $chatInputFocusStore,
-        $showReportScreenStore,
-        $inputFormFocusStore,
-        $mapExplorerSearchinputFocusStore,
-        $emoteMenuStore,
-        $refreshPromptStore,
-        $mapDeletedPromptStore,
-    ]) => {
-        return (
-            !$menuInputFocusStore &&
-            !$chatInputFocusStore &&
-            !($showReportScreenStore !== userReportEmpty) &&
-            !$inputFormFocusStore &&
-            !$mapExplorerSearchinputFocusStore &&
-            !$emoteMenuStore &&
-            !$refreshPromptStore &&
-            !$mapDeletedPromptStore
-        );
-    },
+    [baseEnableUserInputsStore, emoteMenuStore],
+    ([$baseEnableUserInputsStore, $emoteMenuStore]) => $baseEnableUserInputsStore && !$emoteMenuStore,
 );

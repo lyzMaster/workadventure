@@ -8,7 +8,7 @@ const colorNumberToHex = (color: number): string => `#${color.toString(16).padSt
 export class UsernameStatusDisplay {
     public readonly element: HTMLSpanElement;
 
-    private availabilityStatusValue = AvailabilityStatus.ONLINE;
+    private availabilityStatusValue: AvailabilityStatus = AvailabilityStatus.ONLINE;
     private animation?: Animation;
     private redrawTimeout: number | undefined;
 

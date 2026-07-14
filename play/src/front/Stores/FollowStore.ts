@@ -1,59 +1,10 @@
-import { derived, writable } from "svelte/store";
+import { derived } from "svelte/store";
 import { getColorRgbFromHue } from "../WebRtc/ColorGenerator";
 import { gameManager } from "../Phaser/Game/GameManager";
 import PopUpFollow from "../Components/PopUp/PopUpFollow.svelte";
 import { popupStore } from "./PopupStore";
-
-type FollowState = "off" | "requesting" | "active" | "ending";
-type FollowRole = "leader" | "follower";
-
-export const followStateStore = writable<FollowState>("off");
-export const followRoleStore = writable<FollowRole>("leader");
-
-function createFollowUsersStore() {
-    const { subscribe, update, set } = writable<number[]>([]);
-
-    return {
-        subscribe,
-        addFollowRequest(leader: number): void {
-            followStateStore.set("requesting");
-            followRoleStore.set("follower");
-            set([leader]);
-        },
-        addFollower(user: number): void {
-            followStateStore.set("active");
-            followRoleStore.set("leader");
-            update((followers) => {
-                followers.push(user);
-                return followers;
-            });
-        },
-        /**
-         * Removes the follower from the store.
-         * Will update followStateStore and followRoleStore if nobody is following anymore.
-         * @param user
-         */
-        removeFollower(user: number): void {
-            update((followers) => {
-                followers = followers.filter((id) => id !== user);
-
-                if (followers.length === 0) {
-                    followStateStore.set("off");
-                    followRoleStore.set("leader");
-                }
-
-                return followers;
-            });
-        },
-        stopFollowing(): void {
-            set([]);
-            followStateStore.set("off");
-            followRoleStore.set("leader");
-        },
-    };
-}
-
-export const followUsersStore = createFollowUsersStore();
+export { followRoleStore, followStateStore, followUsersStore } from "./FollowStateStore";
+import { followRoleStore, followStateStore, followUsersStore } from "./FollowStateStore";
 
 /**
  * This store contains the color of the follow group. It is derived from the ID of the leader.

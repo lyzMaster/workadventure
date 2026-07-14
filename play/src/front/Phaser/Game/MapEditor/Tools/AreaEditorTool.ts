@@ -10,7 +10,7 @@ import { SizeAlteringSquare } from "../../../Components/MapEditor/SizeAlteringSq
 import { DEPTH_MAP_EDITOR_AREAS_INDEX } from "../../DepthIndexes";
 import type { CopyAreaEventData } from "../../GameMap/EntitiesManager";
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
-import type { GameScene } from "../../GameScene";
+import type { MapEditorSceneContext } from "../../SceneContext";
 import { CreateAreaFrontCommand } from "../Commands/Area/CreateAreaFrontCommand";
 import { DeleteAreaFrontCommand } from "../Commands/Area/DeleteAreaFrontCommand";
 import { UpdateAreaFrontCommand } from "../Commands/Area/UpdateAreaFrontCommand";
@@ -30,7 +30,7 @@ import Pointer = Phaser.Input.Pointer;
 import GameObject = Phaser.GameObjects.GameObject;
 
 export class AreaEditorTool extends MapEditorTool {
-    private scene: GameScene;
+    private scene: MapEditorSceneContext;
     private mapEditorModeManager: MapEditorModeManager;
 
     /**

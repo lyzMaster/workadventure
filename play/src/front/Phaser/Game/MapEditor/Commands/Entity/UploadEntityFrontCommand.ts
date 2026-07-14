@@ -4,7 +4,7 @@ import {
     UploadEntityCommand,
     type UploadEntityCommandDto,
 } from "@workadventure/map-editor";
-import { gameManager } from "../../../GameManager";
+import type { MapEditorSceneContext } from "../../../SceneContext";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 import type { EntitiesCollectionsManager } from "../../EntitiesCollectionsManager";
 import type { FrontCommand } from "../FrontCommand";
@@ -15,6 +15,7 @@ export class UploadEntityFrontCommand extends UploadEntityCommand implements Fro
         uploadEntityMessage: Omit<UploadEntityCommandDto, "type" | "commandId" | "sceneId">,
         private entitiesManager: EntitiesManager,
         private entitiesCollectionManager: EntitiesCollectionsManager,
+        private scene: MapEditorSceneContext,
     ) {
         super(uploadEntityMessage);
     }
@@ -29,16 +30,13 @@ export class UploadEntityFrontCommand extends UploadEntityCommand implements Fro
     }
 
     execute(): Promise<void> {
-        const customEntityCollectionUrl = gameManager.getCurrentGameScene().getCustomEntityCollectionUrl();
+        const customEntityCollectionUrl = this.scene.getCustomEntityCollectionUrl();
         try {
             const uploadedEntity = EntityRawPrefab.parse({
                 ...this.uploadEntityMessage,
                 direction: mapCustomEntityDirectionToDirection(this.uploadEntityMessage.direction),
             });
-            gameManager
-                .getCurrentGameScene()
-                .getEntitiesCollectionsManager()
-                .addUploadedEntity(uploadedEntity, customEntityCollectionUrl);
+            this.scene.getEntitiesCollectionsManager().addUploadedEntity(uploadedEntity, customEntityCollectionUrl);
         } catch (e) {
             console.error(e);
         }
@@ -49,7 +47,7 @@ export class UploadEntityFrontCommand extends UploadEntityCommand implements Fro
     getUndoCommand(): DeleteCustomEntityFrontCommand {
         return new DeleteCustomEntityFrontCommand(
             { id: this.uploadEntityMessage.id },
-            gameManager.getCurrentGameScene().getGameMap().getWamFile(),
+            this.scene.getGameMap().getWamFile(),
             this.entitiesManager,
             this.entitiesCollectionManager,
         );

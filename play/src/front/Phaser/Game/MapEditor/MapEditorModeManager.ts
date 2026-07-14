@@ -6,16 +6,13 @@ import { get } from "svelte/store";
 import type { LocalMapEditorCommand } from "@workadventure/map-editor";
 import debug from "debug";
 import { deepmergeInto } from "deepmerge-ts";
-import type { GameScene } from "../GameScene";
+import type { MapEditorSceneContext } from "../SceneContext";
 import {
     mapEditorAskToClaimPersonalAreaStore,
     mapEditorModeStore,
     mapEditorSelectedToolStore,
 } from "../../../Stores/MapEditorStore";
-import { mapEditorActivated, mapEditorActivatedForThematics } from "../../../Stores/MenuStore";
-import { localUserStore } from "../../../Connection/LocalUserStore";
 import LL from "../../../../i18n/i18n-svelte";
-import { gameManager } from "../GameManager";
 import { isInsidePersonalAreaStore, personalAreaDataStore } from "../../../Stores/PersonalDeskStore";
 import { AreaEditorTool } from "./Tools/AreaEditorTool";
 import type { MapEditorTool } from "./Tools/MapEditorTool";
@@ -29,6 +26,7 @@ import { ExplorerTool } from "./Tools/ExplorerTool";
 import { CloseTool } from "./Tools/CloseTool";
 import { UpdateAreaFrontCommand } from "./Commands/Area/UpdateAreaFrontCommand";
 import type { MapEditResult, MapEditTransport } from "./MapEditTransport";
+import { EditorToolName } from "./EditorToolName";
 
 const unsupportedMapEditTransport: MapEditTransport = {
     acknowledgement: "local",
@@ -42,20 +40,10 @@ const unsupportedMapEditTransport: MapEditTransport = {
     },
 };
 
-export enum EditorToolName {
-    AreaEditor = "AreaEditor",
-    FloorEditor = "FloorEditor",
-    EntityEditor = "EntityEditor",
-    WAMSettingsEditor = "WAMSettingsEditor",
-    TrashEditor = "TrashEditor",
-    ExploreTheRoom = "ExploreTheRoom",
-    CloseMapEditor = "CloseMapEditor",
-}
-
 const logger = debug("map-editor");
 
 export class MapEditorModeManager {
-    private scene: GameScene;
+    private scene: MapEditorSceneContext;
 
     /**
      * Is user currently in Editor Mode
@@ -95,7 +83,7 @@ export class MapEditorModeManager {
     private isReverting: Promise<void> = Promise.resolve();
 
     constructor(
-        scene: GameScene,
+        scene: MapEditorSceneContext,
         private _isInsidePersonalAreaStore = isInsidePersonalAreaStore,
         private _personalAreaDataStore = personalAreaDataStore,
         private readonly mapEditTransport: MapEditTransport = unsupportedMapEditTransport,
@@ -117,7 +105,7 @@ export class MapEditorModeManager {
             [EditorToolName.WAMSettingsEditor]: new WAMSettingsEditorTool(this),
             [EditorToolName.TrashEditor]: new TrashEditorTool(this, areaEditorTool),
             [EditorToolName.ExploreTheRoom]: new ExplorerTool(this, this.scene),
-            [EditorToolName.CloseMapEditor]: new CloseTool(),
+            [EditorToolName.CloseMapEditor]: new CloseTool(this),
         };
         this.activeTool = undefined;
         this.lastlyUsedTool = undefined;
@@ -283,7 +271,7 @@ export class MapEditorModeManager {
         const mapEditorModeStoreValue = get(mapEditorModeStore);
         if (!mapEditorModeStoreValue) return false;
 
-        const mapEditorModeActivated = get(mapEditorActivated);
+        const mapEditorModeActivated = true;
         switch (event.key.toLowerCase()) {
             case "dead":
             case "`": {
@@ -431,9 +419,7 @@ export class MapEditorModeManager {
             this.equipTool(
                 this.lastlyUsedTool && this.lastlyUsedTool != EditorToolName.CloseMapEditor
                     ? this.lastlyUsedTool
-                    : get(mapEditorActivated) || get(mapEditorActivatedForThematics)
-                      ? EditorToolName.EntityEditor
-                      : EditorToolName.ExploreTheRoom,
+                    : EditorToolName.EntityEditor,
             );
         });
     }
@@ -452,13 +438,13 @@ export class MapEditorModeManager {
         return this.activeTool ? this.editorTools[this.activeTool] : undefined;
     }
 
-    public getScene(): GameScene {
+    public getScene(): MapEditorSceneContext {
         return this.scene;
     }
 
     public claimPersonalArea(userName: string) {
         const areaDataToClaim = get(mapEditorAskToClaimPersonalAreaStore);
-        const userUUID = localUserStore.getLocalUser()?.uuid;
+        const userUUID = undefined;
         if (areaDataToClaim === undefined) {
             console.error("No area to claim");
             return;
@@ -476,7 +462,7 @@ export class MapEditorModeManager {
         }
 
         // Get and revoke the personal area of the user if it exists
-        const gameMapFrontWrapper = gameManager.getCurrentGameScene().getGameMapFrontWrapper();
+        const gameMapFrontWrapper = this.scene.getGameMapFrontWrapper();
         for (const area of gameMapFrontWrapper.areasManager?.getAreasByPropertyType("personalAreaPropertyData") ?? []) {
             const property = area.areaData.properties.find((property) => property.type === "personalAreaPropertyData");
             if (!property || (property.type === "personalAreaPropertyData" && property?.ownerId !== userUUID)) continue;

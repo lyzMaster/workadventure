@@ -2,10 +2,9 @@ import * as Phaser from "phaser";
 import type { AreaData, AtLeast, LockableAreaPropertyData } from "@workadventure/map-editor";
 import { deepmergeIntoCustom, type DeepMergeLeafURI } from "deepmerge-ts";
 import { get } from "svelte/store";
-import type { GameScene } from "../Game/GameScene";
+import type { MapEditorSceneContext } from "../Game/SceneContext";
 
 import LL from "../../../i18n/i18n-svelte";
-import { gameManager } from "../Game/GameManager";
 import type { AreasManager } from "../Game/GameMap/AreasManager";
 import { setAreaPropertyVariable } from "../../Stores/AreaPropertyVariablesStore";
 import { touchScreenManager } from "../../Touch/TouchScreenManager";
@@ -25,11 +24,10 @@ export class Area extends Rectangle {
     private collideTimeOut: undefined | NodeJS.Timeout = undefined;
 
     constructor(
-        public readonly scene: GameScene,
+        public readonly scene: MapEditorSceneContext,
         public areaData: AreaData,
         overlap?: boolean,
-        // FIXME: remove this, this is useless
-        private connection = gameManager.getCurrentGameScene().connection,
+        private connection?: { hasTag(tag: string): boolean },
         private areasManager?: AreasManager,
     ) {
         const collide = areasManager?.shouldAreaCollide(areaData.id) ?? false;
@@ -97,15 +95,13 @@ export class Area extends Rectangle {
     }
 
     private applyCollider() {
-        if (this.areaCollider === undefined) {
-            this.areaCollider = this.scene.physics.add.collider(this.scene.CurrentPlayer, this, () =>
-                this.onCollideAction(),
-            );
+        const currentPlayer = this.scene.CurrentPlayer;
+        if (this.areaCollider === undefined && currentPlayer) {
+            this.areaCollider = this.scene.physics.add.collider(currentPlayer, this, () => this.onCollideAction());
             // If the user is already inside the area when the collider is applied, we need to mark it so we don't
             // trigger the collide action until they leave and re-enter the area.
             const isCurrentPlayerAlreadyInArea =
-                this.areasManager?.isCurrentPlayerInArea(this.areaData.id) ??
-                this.scene.physics.overlap(this.scene.CurrentPlayer, this);
+                this.areasManager?.isCurrentPlayerInArea(this.areaData.id) ?? this.scene.physics.overlap(currentPlayer, this);
             if (!this.userHasCollideWithArea && isCurrentPlayerAlreadyInArea) {
                 this.userHasCollideWithArea = true;
             }
@@ -158,11 +154,15 @@ export class Area extends Rectangle {
     }
 
     private displayWarningMessageOnCollide() {
+        const currentPlayer = this.scene.CurrentPlayer;
+        if (!currentPlayer) {
+            return;
+        }
         // Get the reason why the area is blocked
         let message: string = get(LL).area.noAccess(); // Default message
         const messageId = `area-blocked-${this.areaData.id}`;
         let callback = () => {
-            this.scene.CurrentPlayer.destroyText(messageId);
+            currentPlayer.destroyText(messageId);
         };
         if (this.areasManager) {
             const blockReason = this.areasManager.getAreaBlockReason(this.areaData.id);
@@ -185,7 +185,7 @@ export class Area extends Rectangle {
                                 //message = message.replace("[SPACE]", svg.outerHTML);
                                 callback = () => {
                                     setAreaPropertyVariable(this.areaData.id, lockableProperty.id, "lock", false);
-                                    this.scene.CurrentPlayer.destroyText(messageId);
+                                    currentPlayer.destroyText(messageId);
                                 };
                                 break;
                             }
@@ -203,8 +203,8 @@ export class Area extends Rectangle {
         }
 
         // Display message above the player's woka using playText
-        this.scene.CurrentPlayer.destroyText(messageId);
-        this.scene.CurrentPlayer.playText(
+        currentPlayer.destroyText(messageId);
+        currentPlayer.playText(
             messageId,
             message,
             5000, // Display for 5 seconds

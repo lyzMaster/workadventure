@@ -9,14 +9,16 @@ import {
     type CharacterAvailabilityStatus,
     type Direction as DirectionType,
 } from "@workadventure/game-model";
-import { defaultWoka, Deferred, type Movable, type PositionInterface } from "@workadventure/shared-utils";
+import { Deferred } from "@workadventure/shared-utils/src/Deferred";
+import type { Movable, PositionInterface } from "@workadventure/shared-utils/src/Movable";
+import { defaultWoka } from "@workadventure/shared-utils/src/Woka/defaultWoka";
 import { Subject } from "rxjs";
 import { currentPlayerWokaStore } from "../../Stores/CurrentPlayerWokaStore";
 import type { OutlineableInterface } from "../Game/OutlineableInterface";
 import { createColorStore } from "../../Stores/OutlineColorStore";
 import type { PictureStore } from "../../Stores/PictureStore";
 import { TexturesHelper } from "../Helpers/TexturesHelper";
-import type { GameScene } from "../Game/GameScene";
+import type { CharacterSceneContext } from "../Game/SceneContext";
 import { Companion } from "../Companion/Companion";
 import { CharacterTextureError } from "../../Exception/CharacterTextureError";
 import { getPlayerAnimations, PlayerAnimationTypes } from "../Player/Animation";
@@ -67,7 +69,7 @@ export abstract class Character extends Container implements OutlineableInterfac
     private emoteTween: Tween | null = null;
     private texts: Map<string, DOMElement> = new Map();
     private textsToBuild = new Map();
-    scene: GameScene;
+    scene: CharacterSceneContext;
     private lastRenderedSprite: string | undefined;
     private readonly _pictureStore: Readable<string | undefined>;
     protected readonly outlineColorStore = createColorStore();
@@ -89,7 +91,7 @@ export abstract class Character extends Container implements OutlineableInterfac
     private textureLoadedDeferred = new Deferred<void>();
 
     constructor(
-        scene: GameScene,
+        scene: CharacterSceneContext,
         x: number,
         y: number,
         texturesPromise: CancelablePromise<string[]>,

@@ -18,8 +18,8 @@ import {
 } from "../../../Stores/MapEditorStore";
 import { Entity, EntityEvent } from "../../ECS/Entity";
 import { TexturesHelper } from "../../Helpers/TexturesHelper";
-import type { GameScene } from "../GameScene";
-import { EditorToolName } from "../MapEditor/MapEditorModeManager";
+import type { MapEditorSceneContext } from "../SceneContext";
+import { EditorToolName } from "../MapEditor/EditorToolName";
 import type { GameMapFrontWrapper } from "./GameMapFrontWrapper";
 
 import EventEmitter = Phaser.Events.EventEmitter;
@@ -58,7 +58,7 @@ export enum EntitiesManagerEvent {
 }
 
 export class EntitiesManager extends EventEmitter {
-    private scene: GameScene;
+    private scene: MapEditorSceneContext;
     private gameMapFrontWrapper: GameMapFrontWrapper;
 
     private shiftKey?: Key;
@@ -76,7 +76,7 @@ export class EntitiesManager extends EventEmitter {
     private pointerOverEntitySubject = new Subject<Entity>();
     private pointerOutEntitySubject = new Subject<Entity>();
 
-    constructor(scene: GameScene, gameMapFrontWrapper: GameMapFrontWrapper) {
+    constructor(scene: MapEditorSceneContext, gameMapFrontWrapper: GameMapFrontWrapper) {
         super();
         this.scene = scene;
         this.gameMapFrontWrapper = gameMapFrontWrapper;

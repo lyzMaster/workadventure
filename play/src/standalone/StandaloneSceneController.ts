@@ -1,23 +1,20 @@
 import { writable, type Readable } from "svelte/store";
-import { gameManager } from "../front/Phaser/Game/GameManager";
-import type { GameScene } from "../front/Phaser/Game/GameScene";
 import {
     mapEditorEntityModeStore,
     mapEditorModeStore,
     mapEditorSelectedAreaPreviewStore,
     mapEditorSelectedEntityStore,
 } from "../front/Stores/MapEditorStore";
-import { mapEditorActivated } from "../front/Stores/MenuStore";
 import { resolveInitialStandaloneSceneId, saveActiveStandaloneSceneId } from "./ActiveStandaloneScene";
 import { IndexedDBSceneStorage } from "./IndexedDBSceneStorage";
 import { LocalUserSessionProvider } from "./LocalUserSessionProvider";
-import { OfflineRoomTransport } from "./OfflineRoomTransport";
 import type { SceneStorage } from "./SceneStorage";
 import { StandaloneApp } from "./StandaloneApp";
 import { StandaloneSceneResolver } from "./StandaloneSceneResolver";
 import { getStandaloneSceneDefinitions, resolveStandaloneSceneDefinition } from "./StandaloneSceneRegistry";
 import type { StandaloneSceneDefinition, StandaloneSceneId } from "./StandaloneSceneDefinition";
 import { StaticCharacterAssetCatalog } from "./StaticCharacterAssetCatalog";
+import type { StandaloneGameScene } from "./runtime/StandaloneGameScene";
 
 export interface StandaloneSceneController {
     load(sceneId: StandaloneSceneId): Promise<void>;
@@ -30,14 +27,13 @@ export interface StandaloneSceneController {
 export interface StandaloneSceneControllerState {
     activeSceneId: StandaloneSceneId | null;
     activeDefinition: StandaloneSceneDefinition | null;
-    scene: GameScene | null;
+    scene: StandaloneGameScene | null;
     loading: boolean;
     error: string | null;
 }
 
 export class DefaultStandaloneSceneController implements StandaloneSceneController {
     private activeSceneId: StandaloneSceneId | null = null;
-    private activeRuntime: OfflineRoomTransport | null = null;
     private transitionQueue: Promise<void> = Promise.resolve();
     private state = writable<StandaloneSceneControllerState>({
         activeSceneId: null,
@@ -66,11 +62,6 @@ export class DefaultStandaloneSceneController implements StandaloneSceneControll
     }
 
     public start(): Promise<void> {
-        const session = this.sessionProvider.getSession();
-        gameManager.setPlayerName(session.name);
-        gameManager.setCharacterTextureIds(session.characterTextureIds);
-        gameManager.setCompanionTextureId(null);
-        mapEditorActivated.set(true);
         this.app.mountEditor(this);
 
         return this.load(resolveInitialStandaloneSceneId(this.location, this.localStorage));
@@ -125,7 +116,7 @@ export class DefaultStandaloneSceneController implements StandaloneSceneControll
         this.setState({ ...previous, loading: true, error: null });
 
         try {
-            const { room, definition: resolvedDefinition } = this.sceneResolver.resolve(definition.sceneId);
+            const { context, definition: resolvedDefinition } = this.sceneResolver.resolve(definition.sceneId);
             await this.preflightBaseMap(resolvedDefinition);
             await this.flushCurrentScene();
             this.clearEditorRuntimeState();
@@ -133,14 +124,14 @@ export class DefaultStandaloneSceneController implements StandaloneSceneControll
             await this.app.destroyGame();
 
             const session = this.sessionProvider.getSession();
-            const runtime = new OfflineRoomTransport(
-                this.characterAssets,
-                session.characterTextureIds,
+            const scene = this.app.startScene(
+                context,
                 resolvedDefinition,
                 this.storage,
+                session.name,
+                this.characterAssets.resolve(session.characterTextureIds),
             );
-            const scene = this.app.startScene(room, runtime);
-            this.activeRuntime = runtime;
+            await scene.sceneReadyToStartPromise;
             this.activeSceneId = resolvedDefinition.sceneId;
             saveActiveStandaloneSceneId(resolvedDefinition.sceneId, this.localStorage);
             this.replaceSceneQuery(resolvedDefinition.sceneId);
@@ -162,7 +153,7 @@ export class DefaultStandaloneSceneController implements StandaloneSceneControll
         const scene = this.getSnapshot().scene;
         try {
             await scene?.getMapEditorModeManager()?.flush?.();
-            await this.activeRuntime?.flushPersistence();
+            await scene?.flushPersistence();
         } catch (error) {
             console.error("[Standalone] persistence_flush_failed", error);
             throw error;

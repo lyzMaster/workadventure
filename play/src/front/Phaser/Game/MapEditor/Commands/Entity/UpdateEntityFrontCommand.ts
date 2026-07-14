@@ -2,7 +2,7 @@ import type { UpdateEntityCommandDto, WamFile, WAMEntityData, WAMFileFormat } fr
 import { UpdateEntityCommand } from "@workadventure/map-editor";
 import type { EntitiesManager } from "../../../GameMap/EntitiesManager";
 import type { Entity } from "../../../../ECS/Entity";
-import type { GameScene } from "../../../GameScene";
+import type { MapEditorSceneContext } from "../../../SceneContext";
 import type { FrontCommandInterface } from "../FrontCommandInterface";
 import { TexturesHelper } from "../../../../Helpers/TexturesHelper";
 
@@ -14,7 +14,7 @@ export class UpdateEntityFrontCommand extends UpdateEntityCommand implements Fro
         commandId: string | undefined,
         oldConfig: Partial<WAMEntityData> | undefined,
         private entitiesManager: EntitiesManager,
-        private scene: GameScene,
+        private scene: MapEditorSceneContext,
     ) {
         super(wamFile, entityId, dataToModify, commandId, oldConfig);
     }

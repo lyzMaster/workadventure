@@ -4,7 +4,7 @@
     import type { LocalizedString } from "typesafe-i18n";
     import { LL } from "../../../i18n/i18n-svelte";
     import { gameManager } from "../../Phaser/Game/GameManager";
-    import { EditorToolName } from "../../Phaser/Game/MapEditor/MapEditorModeManager";
+    import { EditorToolName } from "../../Phaser/Game/MapEditor/EditorToolName";
     import { mapEditorSelectedToolStore, mapEditorVisibilityStore } from "../../Stores/MapEditorStore";
     import { analyticsClient } from "../../Administration/AnalyticsClient";
     import { mapEditorActivated, mapEditorActivatedForThematics } from "../../Stores/MenuStore";

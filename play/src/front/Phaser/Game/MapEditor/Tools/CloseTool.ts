@@ -1,11 +1,12 @@
 import type { LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
 import { mapEditorModeStore, mapEditorVisibilityStore } from "../../../../Stores/MapEditorStore";
-import { gameManager } from "../../GameManager";
-import { analyticsClient } from "../../../../Administration/AnalyticsClient";
+import type { MapEditorModeManager } from "../MapEditorModeManager";
 import type { MapEditorTool } from "./MapEditorTool";
 
 export class CloseTool implements MapEditorTool {
+    public constructor(private readonly mapEditorModeManager: MapEditorModeManager) {}
+
     public update(time: number, dt: number): void {
         // Nothing to be done
     }
@@ -13,8 +14,7 @@ export class CloseTool implements MapEditorTool {
         // Nothing to be done
     }
     public activate(): void {
-        analyticsClient.toggleMapEditor(false);
-        gameManager.getCurrentGameScene().getMapEditorModeManager().equipTool(undefined);
+        this.mapEditorModeManager.equipTool(undefined);
         mapEditorModeStore.switchMode(false);
         mapEditorVisibilityStore.set(false);
     }

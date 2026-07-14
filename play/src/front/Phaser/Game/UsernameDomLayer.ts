@@ -1,6 +1,6 @@
 import type * as Phaser from "phaser";
 import { DEPTH_INGAME_TEXT_INDEX } from "./DepthIndexes";
-import type { GameScene } from "./GameScene";
+import type { CharacterSceneContext } from "./SceneContext";
 
 // Side of the square probe used to measure the ancestor scale. Large enough that sub-pixel rounding
 // on the measured on-screen size is negligible.
@@ -18,7 +18,7 @@ export class UsernameDomLayer {
     private ancestorScale = 1;
     private ancestorScaleStale = true;
 
-    constructor(scene: GameScene) {
+    constructor(scene: CharacterSceneContext) {
         this.container = document.createElement("div");
         this.container.style.position = "relative";
         this.container.style.pointerEvents = "none";

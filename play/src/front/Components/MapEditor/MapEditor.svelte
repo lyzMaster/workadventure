@@ -1,7 +1,7 @@
 <script lang="ts">
     import { fly } from "svelte/transition";
     import { onMount } from "svelte";
-    import { EditorToolName } from "../../Phaser/Game/MapEditor/MapEditorModeManager";
+    import { EditorToolName } from "../../Phaser/Game/MapEditor/EditorToolName";
     import { mapEditorSelectedToolStore, mapEditorVisibilityStore } from "../../Stores/MapEditorStore";
     import Explorer from "../Exploration/Explorer.svelte";
 

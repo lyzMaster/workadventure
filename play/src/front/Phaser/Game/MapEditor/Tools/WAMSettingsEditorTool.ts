@@ -1,13 +1,13 @@
 import type { LocalMapEditorCommand } from "@workadventure/map-editor";
 import type { GameMapFrontWrapper } from "../../GameMap/GameMapFrontWrapper";
-import type { GameScene } from "../../GameScene";
+import type { MapEditorSceneContext } from "../../SceneContext";
 import type { MapEditorModeManager } from "../MapEditorModeManager";
 import { UpdateWAMSettingFrontCommand } from "../Commands/WAM/UpdateWAMSettingFrontCommand";
 import { mapEditorVisibilityStore } from "../../../../Stores/MapEditorStore";
 import { MapEditorTool } from "./MapEditorTool";
 
 export class WAMSettingsEditorTool extends MapEditorTool {
-    private scene: GameScene;
+    private scene: MapEditorSceneContext;
     private mapEditorModeManager: MapEditorModeManager;
 
     constructor(mapEditorModeManager: MapEditorModeManager) {

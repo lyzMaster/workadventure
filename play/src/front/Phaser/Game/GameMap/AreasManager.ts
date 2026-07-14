@@ -9,9 +9,7 @@ import type {
 } from "@workadventure/map-editor";
 import { AreaPermissions } from "@workadventure/map-editor";
 import { Area } from "../../Entity/Area";
-import type { GameScene } from "../GameScene";
-import { mapEditorActivatedForThematics } from "../../../Stores/MenuStore";
-import { localUserStore } from "../../../Connection/LocalUserStore";
+import type { MapEditorSceneContext } from "../SceneContext";
 import { personalAreaDataStore } from "../../../Stores/PersonalDeskStore";
 import { areaPropertyVariablesManagerStore } from "../../../Stores/AreaPropertyVariablesStore";
 
@@ -26,7 +24,7 @@ export class AreasManager {
     private variableChangesSubscription: Unsubscriber | undefined;
 
     constructor(
-        private scene: GameScene,
+        private scene: MapEditorSceneContext,
         private gameMapAreas: GameMapAreas,
         private userConnectedTags: string[],
         private userCanEdit: boolean,
@@ -85,7 +83,7 @@ export class AreasManager {
         areaToUpdate.updateArea(updatedArea);
         this.updateMapEditorOptionForSpecificAreas();
 
-        const userUUID = localUserStore.getLocalUser()?.uuid;
+        const userUUID = undefined;
         const personalAreaData = get(this._personalAreaDataStore);
 
         if (!personalAreaData || personalAreaData.id !== updatedArea.id) {
@@ -114,7 +112,7 @@ export class AreasManager {
 
     private initializeAreas() {
         const gameMapAreas = this.gameMapAreas.getAreas();
-        const userUUID = localUserStore.getLocalUser()?.uuid;
+        const userUUID = undefined;
         gameMapAreas.forEach((areaData) => {
             if (userUUID && this.gameMapAreas.isAreaOwner(areaData, userUUID)) {
                 this._personalAreaDataStore.set(areaData);
@@ -128,10 +126,9 @@ export class AreasManager {
     }
 
     private updateMapEditorOptionForSpecificAreas() {
-        const userId = localUserStore.getLocalUser()?.uuid;
+        const userId = undefined;
         const userTags = this.scene.connection?.getAllTags() ?? [];
-        const isGameMapHasSpecificAreas = this.gameMapAreas.isGameMapContainsSpecificAreas(userId, userTags);
-        mapEditorActivatedForThematics.set(isGameMapHasSpecificAreas);
+        this.gameMapAreas.isGameMapContainsSpecificAreas(userId, userTags);
     }
 
     public getAreaById(areaId: string): Area | undefined {

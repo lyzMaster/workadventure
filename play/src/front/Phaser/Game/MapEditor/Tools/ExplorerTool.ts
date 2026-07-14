@@ -12,14 +12,13 @@ import {
     mapExplorationModeStore,
     mapExplorationObjectSelectedStore,
 } from "../../../../Stores/MapEditorStore";
-import { gameManager } from "../../GameManager";
-import type { GameScene } from "../../GameScene";
+import type { MapEditorSceneContext } from "../../SceneContext";
 import { Entity } from "../../../ECS/Entity";
 import type { MapEditorModeManager } from "../MapEditorModeManager";
 import type { EntitiesManager } from "../../GameMap/EntitiesManager";
 import { AreaPreview } from "../../../Components/MapEditor/AreaPreview";
 import { waScaleManager } from "../../../Services/WaScaleManager";
-import { enableUserInputsStore } from "../../../../Stores/UserInputStore";
+import { baseEnableUserInputsStore } from "../../../../Stores/UserInputBaseStore";
 import type { MapEditorTool } from "./MapEditorTool";
 
 import Pointer = Phaser.Input.Pointer;
@@ -41,7 +40,7 @@ export class ExplorerTool implements MapEditorTool {
     private zoomLevelBeforeExplorerMode: number | undefined;
 
     private keyDownHandler = (event: KeyboardEvent) => {
-        if (!get(enableUserInputsStore)) return;
+        if (!get(baseEnableUserInputsStore)) return;
         if (event.key === "ArrowDown" || event.key === "s") {
             this.downIsPressed = true;
         }
@@ -56,7 +55,7 @@ export class ExplorerTool implements MapEditorTool {
         }
     };
     private keyUpHandler = (event: KeyboardEvent) => {
-        if (!get(enableUserInputsStore)) return;
+        if (!get(baseEnableUserInputsStore)) return;
         // Define new zone to zoom
         if (event.key === "ArrowDown" || event.key === "s") {
             this.downIsPressed = false;
@@ -131,13 +130,13 @@ export class ExplorerTool implements MapEditorTool {
 
     constructor(
         private mapEditorModeManager: MapEditorModeManager,
-        private readonly scene: GameScene,
+        private readonly scene: MapEditorSceneContext,
     ) {
         this.entitiesManager = this.scene.getGameMapFrontWrapper().getEntitiesManager();
     }
 
     public update(time: number, dt: number): void {
-        if (!get(enableUserInputsStore)) return;
+        if (!get(baseEnableUserInputsStore)) return;
         const factorToMove = 10 * (1 / waScaleManager.zoomModifier);
         if (this.downIsPressed) {
             this.scene.getCameraManager().scrollCamera(0, factorToMove);
@@ -232,8 +231,7 @@ export class ExplorerTool implements MapEditorTool {
         mapEditorVisibilityStore.set(true);
 
         const entitySearchableMap = new Map<string, Entity>();
-        gameManager
-            .getCurrentGameScene()
+        this.scene
             .getGameMapFrontWrapper()
             .getEntitiesManager()
             .getEntities()
@@ -283,7 +281,7 @@ export class ExplorerTool implements MapEditorTool {
     public handleIncomingCommandMessage(editMapCommandMessage: LocalMapEditorCommand): Promise<void> {
         // Refresh the entities store
         mapExplorationEntitiesStore.set(
-            gameManager.getCurrentGameScene().getGameMapFrontWrapper().getEntitiesManager().getEntities(),
+            this.scene.getGameMapFrontWrapper().getEntitiesManager().getEntities(),
         );
         return Promise.resolve();
     }

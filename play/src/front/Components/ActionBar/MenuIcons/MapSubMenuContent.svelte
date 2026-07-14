@@ -20,7 +20,7 @@
     import { isCalendarVisibleStore } from "../../../Stores/CalendarStore";
     import { chatVisibilityStore } from "../../../Stores/ChatStore";
     import ActionBarButton from "../ActionBarButton.svelte";
-    import { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
+    import { EditorToolName } from "../../../Phaser/Game/MapEditor/EditorToolName";
     import AdditionalMenuItems from "./AdditionalMenuItems.svelte";
     import { IconMapSearch, IconDesk, IconDeskExit, IconSpeakerPhone, IconMapEditor } from "@wa-icons";
 

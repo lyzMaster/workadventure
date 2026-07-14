@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "files": [
+    "src/front/ambient.d.ts",
+    "src/front/vite-env.d.ts",
+    "src/standalone/main.ts"
+  ],
+  "include": []
+}

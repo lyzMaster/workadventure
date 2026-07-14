@@ -1,5 +1,4 @@
 import * as Phaser from "phaser";
-import { GameScene } from "../../Game/GameScene";
 
 import Rectangle = Phaser.GameObjects.Rectangle;
 
@@ -51,11 +50,7 @@ export class SizeAlteringSquare extends Rectangle {
         }
         this.selected = value;
         this.setFillStyle(value ? 0x000000 : 0xffffff);
-        if (this.scene instanceof GameScene) {
-            this.scene.markDirty();
-        } else {
-            throw new Error("Not the Game Scene");
-        }
+        (this.scene as Phaser.Scene & { markDirty?: () => void }).markDirty?.();
     }
 
     private bindEventHandlers(): void {

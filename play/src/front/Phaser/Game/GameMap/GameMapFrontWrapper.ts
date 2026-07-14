@@ -19,12 +19,11 @@ import type {
 } from "@workadventure/tiled-map-type-guard";
 import type { Observable } from "rxjs";
 import { Subject } from "rxjs";
-import { Deferred } from "@workadventure/shared-utils";
+import { Deferred } from "@workadventure/shared-utils/src/Deferred";
 import { PathTileType } from "../../../Utils/PathfindingManager";
 import type { Entity } from "../../ECS/Entity";
 import { DEPTH_OVERLAY_INDEX } from "../DepthIndexes";
-import type { ITiledPlace } from "../GameMapPropertiesListener";
-import type { GameScene } from "../GameScene";
+import type { MapEditorSceneContext } from "../SceneContext";
 import { EntitiesManager } from "./EntitiesManager";
 import { AreasManager } from "./AreasManager";
 
@@ -38,6 +37,7 @@ type RenderableTilemapLayer = TilemapLayer | TilemapGPULayer;
 type TileAnimationData = {
     animation?: Array<{ duration?: number }>;
 };
+type ITiledPlace = Omit<ITiledMapLayer | ITiledMapObject, "id"> & { id?: string | number };
 
 const TILED_TILE_FLIP_FLAGS = 0xe0000000;
 const TILE_ANIMATION_REFRESH_FALLBACK_MS = 100;
@@ -73,7 +73,7 @@ export type PropertyChangeCallback = (
 ) => void;
 
 export class GameMapFrontWrapper {
-    private scene: GameScene;
+    private scene: MapEditorSceneContext;
     private gameMap: GameMap;
 
     private oldKey: number | undefined;
@@ -152,7 +152,7 @@ export class GameMapFrontWrapper {
 
     public readonly initializedPromise = new Deferred<void>();
 
-    constructor(scene: GameScene, gameMap: GameMap, phaserMap: Tilemap, terrains: Array<Tileset>) {
+    constructor(scene: MapEditorSceneContext, gameMap: GameMap, phaserMap: Tilemap, terrains: Array<Tileset>) {
         this.scene = scene;
         this.gameMap = gameMap;
         this.phaserMap = phaserMap;
@@ -1039,10 +1039,10 @@ export class GameMapFrontWrapper {
             return false;
         }
         const playersPositions = [
-            ...Array.from(this.scene.getRemotePlayersRepository().getPlayers().values()).map(
-                (player) => player.position,
+            ...Array.from(this.scene.getRemotePlayersRepository().getPlayers().values()).map((player) =>
+                player.getPosition(),
             ),
-            this.scene.CurrentPlayer.getPosition(),
+            ...(this.scene.CurrentPlayer ? [this.scene.CurrentPlayer.getPosition()] : []),
         ];
 
         // check if position is not occupied by a WOKA

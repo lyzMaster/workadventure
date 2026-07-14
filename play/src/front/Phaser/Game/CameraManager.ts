@@ -1,15 +1,12 @@
 import * as Phaser from "phaser";
 import { mapEditorModeStore } from "../../Stores/MapEditorStore";
 import { Easing } from "../../types";
-import { HtmlUtils } from "../../WebRtc/HtmlUtils";
-import type { Box } from "../../WebRtc/LayoutManager";
 import type { Character } from "../Entity/Character";
 import { hasMovedEventName, type Player } from "../Player/Player";
 import type { WaScaleManager, WaScaleManagerFocusTarget } from "../Services/WaScaleManager";
 import { WaScaleManagerEvent } from "../Services/WaScaleManager";
 import type { ActiveEventList } from "../UserInput/UserInputManager";
 import { UserInputEvent } from "../UserInput/UserInputManager";
-import type { RemotePlayer } from "../Entity/RemotePlayer";
 import {
     SMOOTH_BUTTON_ZOOM_DURATION,
     SMOOTH_BUTTON_ZOOM_TARGET_EPSILON,
@@ -17,7 +14,7 @@ import {
     getRetargetedButtonZoomModifier,
     getSmoothButtonZoomModifier,
 } from "./CameraZoomUtils";
-import type { GameScene } from "./GameScene";
+import type { MapEditorSceneContext } from "./SceneContext";
 
 import Clamp = Phaser.Math.Clamp;
 import EventEmitter = Phaser.Events.EventEmitter;
@@ -54,6 +51,12 @@ type CameraAnimation = FocusCameraAnimation | SpeedCameraAnimation;
 type ZoomAnimation = {
     onInterrupt: () => void;
 };
+type Box = {
+    xStart: number;
+    xEnd: number;
+    yStart: number;
+    yEnd: number;
+};
 
 /**
  * The CameraManager is responsible for managing the camera in the game.
@@ -77,7 +80,7 @@ export class CameraManager extends EventEmitter {
     private smoothButtonZoomElapsedMs = 0;
     private continuousButtonZoomFactorPerSecond: number | undefined;
 
-    private playerToFollow?: Player | RemotePlayer;
+    private playerToFollow?: Player | Character;
     private zoomLocked: boolean;
 
     private readonly EDITOR_MODE_SCROLL_SPEED: number = 5;
@@ -99,7 +102,7 @@ export class CameraManager extends EventEmitter {
     private targetFollowOffset: { x: number; y: number } | undefined;
 
     constructor(
-        private scene: GameScene,
+        private scene: MapEditorSceneContext,
         private mapSize: { width: number; height: number },
         waScaleManager: WaScaleManager,
     ) {
@@ -301,11 +304,11 @@ export class CameraManager extends EventEmitter {
         }
 
         if (sendViewportUpdate) {
-            this.scene.sendViewportToServer();
+            this.scene.sendViewportToServer?.();
         }
     }
 
-    public startFollowPlayer(player: Player | RemotePlayer, duration = 0): void {
+    public startFollowPlayer(player: Player | Character, duration = 0): void {
         this.playerToFollow = player;
 
         this.animateToFocus(player, duration, () => {});
@@ -317,7 +320,7 @@ export class CameraManager extends EventEmitter {
      */
     public followRemotePlayer(userId: number): void {
         // Find the remote player by UserId
-        const remotePlayer = this.scene.MapPlayersByKey.get(userId);
+        const remotePlayer = this.scene.MapPlayersByKey?.get(userId);
 
         if (!remotePlayer) {
             console.warn(`Remote player with ID ${userId} not found`);
@@ -333,7 +336,9 @@ export class CameraManager extends EventEmitter {
      */
     public stopFollowRemotePlayer(): void {
         // Start following the current player
-        this.startFollowPlayer(this.scene.CurrentPlayer, 1000);
+        if (this.scene.CurrentPlayer) {
+            this.startFollowPlayer(this.scene.CurrentPlayer, 1000);
+        }
     }
 
     /**
@@ -348,7 +353,10 @@ export class CameraManager extends EventEmitter {
         const xCenter = (box.xEnd - box.xStart) / 2 + box.xStart;
         const yCenter = (box.yEnd - box.yStart) / 2 + box.yStart;
 
-        const game = HtmlUtils.querySelectorOrFail<HTMLDivElement>("#game");
+        const game = document.querySelector<HTMLDivElement>("#game");
+        if (!game) {
+            throw new Error('Unable to find "#game" container');
+        }
 
         // Let's put this in Game coordinates by applying the zoom level:
         this.targetFollowOffset = {
@@ -483,7 +491,7 @@ export class CameraManager extends EventEmitter {
     }
 
     private onCameraUpdate = () => {
-        this.scene.sendViewportToServer();
+        this.scene.sendViewportToServer?.();
     };
 
     private getCameraUpdateEventData(): CameraManagerEventCameraUpdateData {
@@ -516,7 +524,7 @@ export class CameraManager extends EventEmitter {
     }
 
     public setFollowMode(): void {
-        this.scene.reposition();
+        this.scene.reposition?.();
     }
 
     private cancelOffsetTween(): void {
@@ -818,7 +826,7 @@ export class CameraManager extends EventEmitter {
         this.scene.markDirty();
     }
 
-    get playerFollowing(): Player | RemotePlayer | undefined {
+    get playerFollowing(): Player | Character | undefined {
         return this.playerToFollow;
     }
 }

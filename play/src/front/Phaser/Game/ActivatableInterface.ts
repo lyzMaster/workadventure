@@ -1,7 +1,3 @@
-import { Entity } from "../ECS/Entity";
-import { RemotePlayer } from "../Entity/RemotePlayer";
-import { ActionableItem } from "../Items/ActionableItem";
-
 export interface ActivatableInterface {
     readonly activationRadius: number;
     isActivatable: () => boolean;
@@ -14,7 +10,10 @@ export interface ActivatableInterface {
 
 export function isActivatable(object: unknown): object is ActivatableInterface {
     return (
-        (object instanceof Entity || object instanceof RemotePlayer || object instanceof ActionableItem) &&
+        typeof object === "object" &&
+        object !== null &&
+        "isActivatable" in object &&
+        typeof object.isActivatable === "function" &&
         object.isActivatable()
     );
 }

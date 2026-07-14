@@ -1,27 +1,33 @@
-import { MapDetail, Room } from "../front/Connection/Room";
 import { resolveStandaloneSceneDefinition } from "./StandaloneSceneRegistry";
 import type { StandaloneSceneDefinition, StandaloneSceneId } from "./StandaloneSceneDefinition";
 
+export interface StandaloneSceneContext {
+    sceneId: StandaloneSceneId;
+    sceneKey: string;
+    wamUrl: string;
+    baseMapId: string;
+    baseMapRevision: number;
+    defaultSpawn?: { x: number; y: number; direction?: "up" | "right" | "down" | "left" };
+}
+
 export interface ResolvedStandaloneScene {
-    room: Room;
+    context: StandaloneSceneContext;
     definition: StandaloneSceneDefinition;
 }
 
 export class StandaloneSceneResolver {
     public resolve(sceneId: StandaloneSceneId | string): ResolvedStandaloneScene {
         const definition = resolveStandaloneSceneDefinition(sceneId);
-        const roomUrl = new URL(`/standalone/${definition.sceneId}?alone=true`, window.location.origin);
-
         return {
             definition,
-            room: Room.createResolvedRoom(
-                roomUrl,
-                new MapDetail(undefined, new URL(definition.wamUrl, window.location.href).toString()),
-                {
-                    skipCameraPage: true,
-                    enableChat: false,
-                },
-            ),
+            context: {
+                sceneId: definition.sceneId,
+                sceneKey: `standalone-${definition.sceneId}`,
+                wamUrl: new URL(definition.wamUrl, window.location.href).toString(),
+                baseMapId: definition.baseMapId,
+                baseMapRevision: definition.baseMapRevision,
+                defaultSpawn: definition.defaultSpawn,
+            },
         };
     }
 }

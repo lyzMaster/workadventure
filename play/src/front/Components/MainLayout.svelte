@@ -31,7 +31,7 @@
     import { highlightFullScreen } from "../Stores/ActionsCamStore";
     import { chatVisibilityStore } from "../Stores/ChatStore";
     import { chatSidebarWidthStore } from "../Chat/ChatSidebarWidthStore";
-    import { EditorToolName } from "../Phaser/Game/MapEditor/MapEditorModeManager";
+    import { EditorToolName } from "../Phaser/Game/MapEditor/EditorToolName";
     import { streamableCollectionStore } from "../Stores/StreamableCollectionStore";
     import { inputFormFocusStore } from "../Stores/UserInputStore";
     import { showRecordingList } from "../Stores/RecordingStore";

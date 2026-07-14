@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { LocalizedString } from "typesafe-i18n";
-    import type { EditorToolName } from "../../../Phaser/Game/MapEditor/MapEditorModeManager";
+    import type { EditorToolName } from "../../../Phaser/Game/MapEditor/EditorToolName";
     import { mapEditorSelectedToolStore } from "../../../Stores/MapEditorStore";
     import { createFloatingUiActions } from "../../../Utils/svelte-floatingui";
 

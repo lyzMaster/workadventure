@@ -22,10 +22,9 @@ import { DeleteEntityFrontCommand } from "../Commands/Entity/DeleteEntityFrontCo
 import { ModifyCustomEntityFrontCommand } from "../Commands/Entity/ModifyCustomEntityFrontCommand";
 import { UpdateEntityFrontCommand } from "../Commands/Entity/UpdateEntityFrontCommand";
 import { UploadEntityFrontCommand } from "../Commands/Entity/UploadEntityFrontCommand";
-import type { MapEditorModeManager } from "../MapEditorModeManager";
-import { EditorToolName } from "../MapEditorModeManager";
+import type { MapEditorController } from "../MapEditorController";
+import { EditorToolName } from "../EditorToolName";
 import { AreaPreview } from "../../../Components/MapEditor/AreaPreview";
-import { mapEditorActivated } from "../../../../Stores/MenuStore";
 import { EntityRelatedEditorTool } from "./EntityRelatedEditorTool";
 
 import Key = Phaser.Input.Keyboard.Key;
@@ -51,7 +50,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
     protected mapEditorModifyCustomEntityEventStoreUnsubscriber: Unsubscriber | undefined;
     protected mapEditorDeleteCustomEntityEventStoreUnsubscriber: Unsubscriber | undefined;
 
-    constructor(mapEditorModeManager: MapEditorModeManager) {
+    constructor(mapEditorModeManager: MapEditorController) {
         super(mapEditorModeManager);
         this.shiftKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
         this.ctrlKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
@@ -161,6 +160,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                         editMapCommandMessage,
                         this.entitiesManager,
                         this.scene.getEntitiesCollectionsManager(),
+                        this.scene,
                     ),
                 );
                 break;
@@ -232,6 +232,7 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
                                 uploadEntityMessage,
                                 this.entitiesManager,
                                 this.scene.getEntitiesCollectionsManager(),
+                                this.scene,
                             ),
                         );
                         mapEditorEntityUploadEventStore.set(undefined);
@@ -329,11 +330,8 @@ export class EntityEditorTool extends EntityRelatedEditorTool {
         }
 
         if (!this.entityPrefabPreview || !this.entityPrefab) {
-            // Check that the user can open map editor to edit an area
-            if (get(mapEditorActivated)) {
-                if (clickedAreaPreview && get(mapEditorSelectedToolStore) !== EditorToolName.AreaEditor) {
-                    this.scene.getMapEditorModeManager().equipTool(EditorToolName.AreaEditor);
-                }
+            if (clickedAreaPreview && get(mapEditorSelectedToolStore) !== EditorToolName.AreaEditor) {
+                this.scene.getMapEditorModeManager().equipTool(EditorToolName.AreaEditor);
             }
             return;
         }

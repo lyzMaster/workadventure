@@ -20,34 +20,6 @@
             }
         </style>
         <script>
-            (() => {
-                const requests = [];
-                const record = (transport, url) => {
-                    requests.push({ transport, url: String(url) });
-                    document.documentElement.dataset.standaloneNetworkAudit = JSON.stringify(requests);
-                };
-
-                const nativeFetch = window.fetch.bind(window);
-                window.fetch = (input, init) => {
-                    record("fetch", typeof input === "string" ? input : input.url);
-                    return nativeFetch(input, init);
-                };
-
-                const nativeOpen = XMLHttpRequest.prototype.open;
-                XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-                    record("xhr", url);
-                    return nativeOpen.call(this, method, url, ...rest);
-                };
-
-                const NativeWebSocket = window.WebSocket;
-                window.WebSocket = class AuditedWebSocket extends NativeWebSocket {
-                    constructor(url, protocols) {
-                        record("websocket", url);
-                        super(url, protocols);
-                    }
-                };
-            })();
-
             window.env = {
                 NODE_ENV: "development",
                 PUSHER_URL: "",

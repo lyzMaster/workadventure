@@ -3,7 +3,7 @@
     import { analyticsClient } from "../../Administration/AnalyticsClient";
     import { mapEditorModeStore, mapExplorationModeStore } from "../../Stores/MapEditorStore";
     import { gameManager } from "../../Phaser/Game/GameManager";
-    import { EditorToolName } from "../../Phaser/Game/MapEditor/MapEditorModeManager";
+    import { EditorToolName } from "../../Phaser/Game/MapEditor/EditorToolName";
     import { BUTTON_ZOOM_FACTOR_PER_SECOND, BUTTON_ZOOM_STEP_FACTOR } from "../../Phaser/Game/CameraZoomUtils";
     import LL from "../../../i18n/i18n-svelte";
     import { IconFocusCentered, IconMapSearch, IconMinus, IconPlus } from "@wa-icons";

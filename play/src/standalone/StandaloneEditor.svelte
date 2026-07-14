@@ -1,13 +1,13 @@
 <script lang="ts">
     import type { EntityPrefab } from "@workadventure/map-editor";
     import { onDestroy } from "svelte";
-    import { EditorToolName } from "../front/Phaser/Game/MapEditor/MapEditorModeManager";
+    import { EditorToolName } from "../front/Phaser/Game/MapEditor/EditorToolName";
     import { UpdateEntityFrontCommand } from "../front/Phaser/Game/MapEditor/Commands/Entity/UpdateEntityFrontCommand";
     import type { EntityVariant } from "../front/Phaser/Game/MapEditor/Entities/EntityVariant";
     import EntityEditorPicker from "../front/Components/MapEditor/EntityEditor/EntityEditorPicker.svelte";
     import EntityVariantColorPicker from "../front/Components/MapEditor/EntityEditor/EntityItem/EntityVariantColorPicker.svelte";
     import EntityVariantPositionPicker from "../front/Components/MapEditor/EntityEditor/EntityItem/EntityVariantPositionPicker.svelte";
-    import { gameSceneIsLoadedStore } from "../front/Stores/GameSceneStore";
+    import { gameSceneIsLoadedStore } from "../front/Stores/GameSceneLoadedStore";
     import {
         mapEditorEntityModeStore,
         mapEditorModeStore,

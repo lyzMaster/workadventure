@@ -9,7 +9,6 @@ import type {
 } from "@workadventure/map-editor";
 import { get } from "svelte/store";
 import { DEPTH_MAP_EDITOR_AREAS_INDEX } from "../../Game/DepthIndexes";
-import { GameScene } from "../../Game/GameScene";
 import { SpeechDomElement } from "../../Entity/SpeechDomElement";
 import LL from "../../../../i18n/i18n-svelte";
 import { SizeAlteringSquare, SizeAlteringSquareEvent, SizeAlteringSquarePosition as Edge } from "./SizeAlteringSquare";
@@ -336,11 +335,7 @@ export class AreaPreview extends Rectangle {
                 }
                 this.updateSquaresPositions();
                 this.moved = true;
-                if (this.scene instanceof GameScene) {
-                    this.scene.markDirty();
-                } else {
-                    throw new Error("Not the Game Scene");
-                }
+                this.markSceneDirty();
             }
         });
         this.on(Phaser.Input.Events.POINTER_UP, (pointer: Pointer) => {
@@ -454,11 +449,7 @@ export class AreaPreview extends Rectangle {
                     square.y = oldY;
                 }
                 this.updateSquaresPositions();
-                if (this.scene instanceof GameScene) {
-                    this.scene.markDirty();
-                } else {
-                    throw new Error("Not the Game Scene");
-                }
+                this.markSceneDirty();
             });
 
             square.on(SizeAlteringSquareEvent.Released, () => {
@@ -648,5 +639,10 @@ export class AreaPreview extends Rectangle {
             return (propertyTranslation as { actionButtonLabel: () => string }).actionButtonLabel();
         }
         return get(LL).mapEditor.explorer.details.moveToArea({ name: "" });
+    }
+
+    private markSceneDirty(): void {
+        const scene = this.scene as Phaser.Scene & { markDirty?: () => void };
+        scene.markDirty?.();
     }
 }

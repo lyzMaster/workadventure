@@ -20,6 +20,7 @@
     "build:standalone": "cross-env vite build --config vite.standalone.config.ts",
     "preview:standalone": "cross-env vite preview --config vite.standalone.config.ts",
     "typecheck": "cross-env tsc --noEmit",
+    "typecheck:standalone": "cross-env tsc --noEmit --project tsconfig.standalone.json",
     "build-iframe-api": "vite --config iframe-api.vite.config.ts build",
     "watch-iframe-api": "npm run build-iframe-api -- --watch",
     "build-typings": "cross-env tsc --project tsconfig-for-iframe-api-typings.json",

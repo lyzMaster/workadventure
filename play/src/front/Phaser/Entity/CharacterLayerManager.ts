@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import type { CharacterTexture } from "@workadventure/game-model";
-import type { GameScene } from "../Game/GameScene";
+import type { CharacterSceneContext } from "../Game/SceneContext";
 import { TexturesHelper } from "../Helpers/TexturesHelper";
 import { CharacterTextureError } from "../../Exception/CharacterTextureError";
 import { gameManager } from "../Game/GameManager";
@@ -49,7 +49,7 @@ export class CharacterLayerManager {
             });
     }
 
-    private static async getSnapshot(scene: GameScene, sprites: Map<string, Sprite>): Promise<string> {
+    private static async getSnapshot(scene: CharacterSceneContext, sprites: Map<string, Sprite>): Promise<string> {
         return TexturesHelper.getSnapshot(
             scene,
             ...Array.from(sprites.values()).map((sprite) => ({ sprite, frame: 1 })),
@@ -65,7 +65,7 @@ export class CharacterLayerManager {
         });
     }
 
-    private static getSprites(scene: GameScene, textures: string[], frame?: string | number): Map<string, Sprite> {
+    private static getSprites(scene: CharacterSceneContext, textures: string[], frame?: string | number): Map<string, Sprite> {
         const sprites = new Map<string, Sprite>();
         if (textures.length < 1) {
             throw new CharacterTextureError("no texture given");
