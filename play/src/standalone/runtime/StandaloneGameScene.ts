@@ -41,6 +41,11 @@ import { CharacterNameLayer } from "../characters/CharacterNameLayer";
 import { DEFAULT_LOCAL_PLAYER_MOVEMENT, LocalPlayer } from "../characters/LocalPlayer";
 import { characterMovedEventName, type CharacterMovedEvent } from "../characters/CharacterEvents";
 import { CharacterPathfinder } from "../pathfinding/CharacterPathfinder";
+import { AgentCharacterRepository } from "../characters/AgentCharacterRepository";
+import { AgentCharacterController } from "../characters/AgentCharacterController";
+import { PhaserAgentCharacterTextureLoader } from "../characters/AgentCharacterTextureLoader";
+import type { StandaloneCharacter } from "../characters/StandaloneCharacter";
+import type { CollisionGridProvider } from "../pathfinding/CollisionGridProvider";
 
 type Position = { x: number; y: number };
 type Tilemap = Phaser.Tilemaps.Tilemap;
@@ -78,6 +83,8 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
     public Terrains: Tileset[] = [];
     public userInputManager!: UserInputManager;
     public usernameLayer!: CharacterNameLayer;
+    public agentCharacterRepository!: AgentCharacterRepository;
+    public agentCharacterController!: AgentCharacterController;
 
     private readonly sceneReadyToStartDeferred = new Deferred<void>();
     public readonly sceneReadyToStartPromise = this.sceneReadyToStartDeferred.promise;
@@ -142,9 +149,19 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
                 console.error("[Standalone] game_map_initialize_failed", error);
                 this.sceneReadyToStartDeferred.reject(error);
             });
-            this.pathfinder = new CharacterPathfinder({
+            const collisionGridProvider: CollisionGridProvider = {
                 getCollisionGrid: () => this.gameMapFrontWrapper.getCollisionGrid({ emitMapChangedEvent: false }),
                 getTileDimensions: () => this.gameMapFrontWrapper.getTileDimensions(),
+            };
+            this.pathfinder = new CharacterPathfinder(collisionGridProvider);
+            this.agentCharacterRepository = new AgentCharacterRepository();
+            this.agentCharacterController = new AgentCharacterController({
+                host: this,
+                repository: this.agentCharacterRepository,
+                pathfinder: this.pathfinder,
+                collisionGridProvider,
+                textureLoader: new PhaserAgentCharacterTextureLoader(this),
+                createMapCollisionForCharacter: (character) => this.createMapCollisionForCharacter(character),
             });
             this.userInputManager = new UserInputManager(this, new StandaloneUserInputHandler(this));
             this.cameraManager = new CameraManager(
@@ -172,16 +189,19 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
 
     public update(time: number, delta: number): void {
         this.mapEditorModeManager?.update(time, delta);
+        this.agentCharacterRepository?.update(delta);
         this.CurrentPlayer?.moveUser(delta, this.userInputManager.getEventListForGameTick());
     }
 
     public cleanupClosingScene(): void {
+        this.agentCharacterController?.destroy();
+        this.agentCharacterRepository?.clear();
+        this.CurrentPlayer?.destroy();
+        this.pathfinder?.destroy();
         this.userInputManager?.destroy();
         this.cameraManager?.destroy();
         this.mapEditorModeManager?.destroy();
-        this.pathfinder?.destroy();
         this.outlineManager?.clear();
-        this.CurrentPlayer?.destroy();
         this.usernameLayer?.destroy();
     }
 
@@ -215,6 +235,10 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
 
     public getPathfinder(): CharacterPathfinder {
         return this.pathfinder;
+    }
+
+    public getAgentController(): AgentCharacterController {
+        return this.agentCharacterController;
     }
 
     public getEntityById(entityId: string): Entity | undefined {
@@ -440,11 +464,12 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
             },
             this.pathfinder,
         );
-        this.createCollisionWithPlayer();
+        this.createMapCollisionForCharacter(this.CurrentPlayer);
         this.cameraManager.startFollowPlayer(this.CurrentPlayer, 0);
         this.CurrentPlayer.on(characterMovedEventName, (event: CharacterMovedEvent) => {
             this.handleCurrentPlayerHasMovedEvent(event);
         });
+        await this.CurrentPlayer.ready();
         this.gameMapFrontWrapper.setPosition(startPosition.x, startPosition.y);
         this.gameMapFrontWrapper.initializeAreaManager([], true);
         this.sceneReadyToStartDeferred.resolve();
@@ -461,12 +486,12 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
         };
     }
 
-    private createCollisionWithPlayer(): void {
+    private createMapCollisionForCharacter(character: StandaloneCharacter): void {
         for (const phaserLayer of this.gameMapFrontWrapper.phaserLayers) {
             if (phaserLayer.layer.name === "__areasCollisionLayer") {
                 continue;
             }
-            this.physics.add.collider(this.CurrentPlayer, phaserLayer);
+            this.physics.add.collider(character, phaserLayer);
             phaserLayer.setCollisionByProperty({ collides: true });
         }
     }

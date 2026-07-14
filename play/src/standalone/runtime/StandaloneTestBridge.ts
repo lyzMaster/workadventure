@@ -1,5 +1,14 @@
 import * as Phaser from "phaser";
 import { v4 as uuidv4 } from "uuid";
+import type {
+    AgentActionErrorCode,
+    AgentActionResult,
+    AgentCharacterDefinition,
+    AgentCharacterSnapshot,
+    CharacterId,
+    CharacterSayType,
+    Direction,
+} from "@workadventure/game-model";
 import type { EntityPrefab, WAMEntityData } from "@workadventure/map-editor";
 import { CreateEntityFrontCommand } from "../../front/Phaser/Game/MapEditor/Commands/Entity/CreateEntityFrontCommand";
 import { DeleteEntityFrontCommand } from "../../front/Phaser/Game/MapEditor/Commands/Entity/DeleteEntityFrontCommand";
@@ -28,6 +37,13 @@ type TestEntitySnapshot = {
     direction: string;
 };
 
+type TestPrefabSnapshot = {
+    prefabId: string;
+    collectionName: string;
+    name: string;
+    hasCollisionGrid: boolean;
+};
+
 type TestBridgeApi = {
     getSceneState(): {
         sceneId: StandaloneSceneId;
@@ -42,7 +58,25 @@ type TestBridgeApi = {
         moving: boolean;
     };
     getEntities(): TestEntitySnapshot[];
+    listFurniturePrefabs(): TestPrefabSnapshot[];
     movePlayer(target: { x: number; y: number }): Promise<{ x: number; y: number; cancelled: boolean }>;
+    spawnAgent(definition: AgentCharacterDefinition): Promise<AgentActionResult<AgentCharacterSnapshot>>;
+    listAgents(): AgentActionResult<AgentCharacterSnapshot[]>;
+    getAgentState(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
+    moveAgent(input: {
+        characterId: CharacterId;
+        target: { x: number; y: number };
+        options?: { tryFindingNearestAvailable?: boolean; timeoutMs?: number; maxCalculations?: number; speed?: number };
+    }): Promise<AgentActionResult<AgentCharacterSnapshot>>;
+    stopAgent(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
+    faceAgent(input: { characterId: CharacterId; direction: Direction }): AgentActionResult<AgentCharacterSnapshot>;
+    speakAgent(input: {
+        characterId: CharacterId;
+        text: string;
+        type?: CharacterSayType;
+    }): AgentActionResult<AgentCharacterSnapshot>;
+    clearAgentSpeech(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
+    removeAgent(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
     openFurnitureEditor(): Promise<void>;
     closeFurnitureEditor(): Promise<void>;
     selectFurniture(input: { collectionName: string; prefabId: string }): Promise<{ prefabId: string }>;
@@ -93,6 +127,7 @@ export function installStandaloneTestBridge(
                     : false,
         }),
         getEntities: () => listEntities(scene),
+        listFurniturePrefabs: () => listFurniturePrefabs(scene),
         movePlayer: async ({ x, y }) => {
             const result = await scene.moveTo({ x, y }, false);
             if (!result.ok) {
@@ -103,6 +138,42 @@ export function installStandaloneTestBridge(
                 y: result.character.position.y,
                 cancelled: false,
             };
+        },
+        spawnAgent: async (definition) => {
+            const agentController = safeGetAgentController(scene);
+            return toJson(agentController ? await agentController.spawn(definition) : agentBridgeFailure("scene_not_loaded"));
+        },
+        listAgents: () => {
+            const agentController = safeGetAgentController(scene);
+            return toJson(agentController ? agentController.list() : agentBridgeFailure("scene_not_loaded"));
+        },
+        getAgentState: ({ characterId }) => {
+            const agentController = safeGetAgentController(scene);
+            return toJson(agentController ? agentController.getState(characterId) : agentBridgeFailure("scene_not_loaded"));
+        },
+        moveAgent: async ({ characterId, target, options }) => {
+            const agentController = safeGetAgentController(scene);
+            return toJson(agentController ? await agentController.moveTo(characterId, target, options) : agentBridgeFailure("scene_not_loaded"));
+        },
+        stopAgent: ({ characterId }) => {
+            const agentController = safeGetAgentController(scene);
+            return toJson(agentController ? agentController.stop(characterId) : agentBridgeFailure("scene_not_loaded"));
+        },
+        faceAgent: ({ characterId, direction }) => {
+            const agentController = safeGetAgentController(scene);
+            return toJson(agentController ? agentController.face(characterId, direction) : agentBridgeFailure("scene_not_loaded"));
+        },
+        speakAgent: ({ characterId, text, type }) => {
+            const agentController = safeGetAgentController(scene);
+            return toJson(agentController ? agentController.speak(characterId, text, type) : agentBridgeFailure("scene_not_loaded"));
+        },
+        clearAgentSpeech: ({ characterId }) => {
+            const agentController = safeGetAgentController(scene);
+            return toJson(agentController ? agentController.clearSpeech(characterId) : agentBridgeFailure("scene_not_loaded"));
+        },
+        removeAgent: ({ characterId }) => {
+            const agentController = safeGetAgentController(scene);
+            return toJson(agentController ? agentController.remove(characterId) : agentBridgeFailure("scene_not_loaded"));
         },
         openFurnitureEditor: async () => {
             scene.openFurnitureEditor();
@@ -215,6 +286,7 @@ export function installStandaloneTestBridge(
             document.documentElement.dataset.standalonePlayerPosition = JSON.stringify(bridge.getPlayerState());
         }
         document.documentElement.dataset.standaloneEntities = JSON.stringify(bridge.getEntities());
+        document.documentElement.dataset.standaloneAgents = JSON.stringify(bridge.listAgents());
         document.documentElement.dataset.standaloneNetworkAudit = JSON.stringify(readNetworkAudit());
     };
 
@@ -227,6 +299,7 @@ export function installStandaloneTestBridge(
             delete document.documentElement.dataset.standaloneActiveScene;
             delete document.documentElement.dataset.standalonePlayerPosition;
             delete document.documentElement.dataset.standaloneEntities;
+            delete document.documentElement.dataset.standaloneAgents;
             delete document.documentElement.dataset.standaloneNetworkAudit;
         },
     };
@@ -279,6 +352,23 @@ function listEntities(scene: StandaloneGameScene): TestEntitySnapshot[] {
     }));
 }
 
+function listFurniturePrefabs(scene: StandaloneGameScene): TestPrefabSnapshot[] {
+    let snapshots: TestPrefabSnapshot[] = [];
+    const unsubscribe = scene
+        .getEntitiesCollectionsManager()
+        .getEntitiesPrefabsVariantStore()
+        .subscribe((variants) => {
+            snapshots = variants.map((variant) => ({
+                prefabId: variant.defaultPrefab.id,
+                collectionName: variant.defaultPrefab.collectionName,
+                name: variant.defaultPrefab.name,
+                hasCollisionGrid: (variant.defaultPrefab.collisionGrid?.length ?? 0) > 0,
+            }));
+        });
+    unsubscribe();
+    return snapshots;
+}
+
 function safeGetGameMapFrontWrapper(scene: StandaloneGameScene) {
     try {
         return scene.getGameMapFrontWrapper();
@@ -287,9 +377,30 @@ function safeGetGameMapFrontWrapper(scene: StandaloneGameScene) {
     }
 }
 
+function safeGetAgentController(scene: StandaloneGameScene) {
+    try {
+        return scene.getAgentController();
+    } catch {
+        return undefined;
+    }
+}
+
+function agentBridgeFailure<T>(code: AgentActionErrorCode, message = "Standalone scene is not loaded yet"): AgentActionResult<T> {
+    return {
+        ok: false,
+        actionId: "standalone-test-bridge",
+        code,
+        message,
+    };
+}
+
 function readNetworkAudit(): NetworkAuditEntry[] {
     const raw = document.documentElement.dataset.standaloneNetworkAudit;
     return raw ? (JSON.parse(raw) as NetworkAuditEntry[]) : [];
+}
+
+function toJson<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value)) as T;
 }
 
 function installNetworkAuditBridge(): void {

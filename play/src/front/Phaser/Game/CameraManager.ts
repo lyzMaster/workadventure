@@ -63,7 +63,6 @@ export interface CameraFollowTarget extends Phaser.Events.EventEmitter {
 
 export interface CameraManagerSceneContext extends Phaser.Scene {
     CurrentPlayer?: CameraFollowTarget;
-    MapPlayersByKey?: Pick<Map<number, CameraFollowTarget>, "get">;
     markDirty(): void;
     sendViewportToServer?(): void;
     reposition?(): void;
@@ -320,32 +319,6 @@ export class CameraManager extends EventEmitter {
 
         this.animateToFocus(player, duration, () => {});
         return;
-    }
-
-    /**
-     * Follow a remote player by their ID. Centers the camera on them and shows a popup.
-     */
-    public followRemotePlayer(userId: number): void {
-        // Find the remote player by UserId
-        const remotePlayer = this.scene.MapPlayersByKey?.get(userId);
-
-        if (!remotePlayer) {
-            console.warn(`Remote player with ID ${userId} not found`);
-            return;
-        }
-
-        // Restore camera mode
-        this.startFollowPlayer(remotePlayer, 1000);
-    }
-
-    /**
-     * Stop following a remote player.
-     */
-    public stopFollowRemotePlayer(): void {
-        // Start following the current player
-        if (this.scene.CurrentPlayer) {
-            this.startFollowPlayer(this.scene.CurrentPlayer, 1000);
-        }
     }
 
     /**

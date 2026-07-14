@@ -35,6 +35,45 @@ export interface CharacterSnapshot {
     motionState: CharacterMotionState;
 }
 
+export interface AgentCharacterDefinition {
+    characterId: CharacterId;
+    name: string;
+    sceneId: string;
+    appearance: CharacterAppearance;
+    spawnPosition: CharacterPosition;
+    movementConfig?: CharacterMovementConfig;
+}
+
+export interface AgentCharacterSnapshot extends CharacterSnapshot {
+    kind: "agent";
+}
+
+export type AgentActionErrorCode =
+    | "character_not_found"
+    | "character_already_exists"
+    | "scene_not_loaded"
+    | "scene_mismatch"
+    | "invalid_target"
+    | "spawn_blocked"
+    | "path_not_found"
+    | "cancelled"
+    | "timeout"
+    | "destroyed"
+    | "texture_load_failed";
+
+export type AgentActionResult<T> =
+    | {
+          ok: true;
+          actionId: string;
+          value: T;
+      }
+    | {
+          ok: false;
+          actionId: string;
+          code: AgentActionErrorCode;
+          message: string;
+      };
+
 export type CharacterMoveResult =
     | {
           ok: true;

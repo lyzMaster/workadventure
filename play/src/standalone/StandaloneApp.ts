@@ -21,6 +21,7 @@ export class StandaloneApp {
     private editor: ReturnType<typeof mount> | undefined;
     private resizeHandler: (() => void) | undefined;
     private testBridge: { destroy(): void } | undefined;
+    private devAgentBridge: { destroy(): void } | undefined;
     private sceneController: DefaultStandaloneSceneController | undefined;
 
     public mountEditor(controller: DefaultStandaloneSceneController): void {
@@ -94,6 +95,15 @@ export class StandaloneApp {
                 this.testBridge = installStandaloneTestBridge(this.game, scene, context.sceneId, this.sceneController);
             });
         }
+        if (import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_BRIDGE === "true") {
+            void import("./runtime/AgentDebugBridge").then(({ installAgentDebugBridge }) => {
+                if (this.scene !== scene) {
+                    return;
+                }
+                this.devAgentBridge?.destroy();
+                this.devAgentBridge = installAgentDebugBridge(scene);
+            });
+        }
         return scene;
     }
 
@@ -101,6 +111,8 @@ export class StandaloneApp {
         try {
             this.testBridge?.destroy();
             this.testBridge = undefined;
+            this.devAgentBridge?.destroy();
+            this.devAgentBridge = undefined;
             this.scene?.cleanupClosingScene();
         } catch (error) {
             console.error("[Standalone] scene cleanup failed before destroying Phaser Game", error);
@@ -115,6 +127,7 @@ export class StandaloneApp {
         }
         delete document.documentElement.dataset.standalonePlayerPosition;
         delete document.documentElement.dataset.standaloneEntities;
+        delete document.documentElement.dataset.standaloneAgents;
         delete document.documentElement.dataset.standaloneEntityDiagnostics;
     }
 

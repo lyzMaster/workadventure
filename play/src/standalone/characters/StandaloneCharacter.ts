@@ -29,6 +29,18 @@ import Sprite = Phaser.GameObjects.Sprite;
 type CancelableTexturePromise = PromiseLike<string[]> & { cancel?: () => void };
 
 type PathFollowResolver = (result: CharacterMoveResult) => void;
+type StandaloneCharacterReadyFailureCode = "destroyed" | "texture_load_failed";
+
+export class StandaloneCharacterReadyError extends Error {
+    public constructor(
+        public readonly code: StandaloneCharacterReadyFailureCode,
+        message: string,
+        public readonly cause?: unknown,
+    ) {
+        super(message);
+        this.name = "StandaloneCharacterReadyError";
+    }
+}
 
 export interface StandaloneCharacterOptions {
     id: CharacterId;
@@ -65,9 +77,17 @@ export class StandaloneCharacter extends Phaser.GameObjects.Container {
     private currentPathSegmentDistanceFromStart = 0;
     private pathFollowingResolve: PathFollowResolver | undefined;
     private lastRenderedSprite: string | undefined;
+    private readySettled = false;
+    private readonly readyPromise: Promise<void>;
+    private resolveReady!: () => void;
+    private rejectReady!: (reason: StandaloneCharacterReadyError) => void;
 
     public constructor(protected readonly host: CharacterRuntimeHost, options: StandaloneCharacterOptions) {
         super(host.phaserScene, options.x, options.y);
+        this.readyPromise = new Promise<void>((resolve, reject) => {
+            this.resolveReady = resolve;
+            this.rejectReady = reject;
+        });
         this.id = options.id;
         this.playerName = options.name;
         this.lastDirectionValue = options.direction;
@@ -91,11 +111,23 @@ export class StandaloneCharacter extends Phaser.GameObjects.Container {
         void Promise.resolve(options.texturesPromise)
             .then((textures) => {
                 if (this.destroyed) {
-                    return;
+                    throw new StandaloneCharacterReadyError("destroyed", "Character was destroyed before textures were ready");
                 }
                 this.addTextures(textures);
                 this.invisible = false;
                 this.playAnimation(this.lastDirectionValue, false);
+                this.resolveReadyOnce();
+            })
+            .catch((error: unknown) => {
+                this.rejectReadyOnce(
+                    error instanceof StandaloneCharacterReadyError
+                        ? error
+                        : new StandaloneCharacterReadyError(
+                              "texture_load_failed",
+                              error instanceof Error ? error.message : String(error),
+                              error,
+                          ),
+                );
             })
             .finally(() => {
                 this.texturePromise = undefined;
@@ -108,6 +140,10 @@ export class StandaloneCharacter extends Phaser.GameObjects.Container {
 
     public getPosition(): { x: number; y: number } {
         return { x: this.x, y: this.y };
+    }
+
+    public ready(): Promise<void> {
+        return this.readyPromise;
     }
 
     public getBody(): Body {
@@ -199,6 +235,7 @@ export class StandaloneCharacter extends Phaser.GameObjects.Container {
             return;
         }
         this.destroyed = true;
+        this.rejectReadyOnce(new StandaloneCharacterReadyError("destroyed", "Character was destroyed before it became ready"));
         this.finishFollowingPath("destroyed", "Character was destroyed");
         this.bubblePresentation.destroy();
         this.nameDisplay?.destroy();
@@ -350,6 +387,22 @@ export class StandaloneCharacter extends Phaser.GameObjects.Container {
 
     private getPathWalkingSpeed(): number {
         return this.pathWalkingSpeed ?? this.movementConfig.walkingSpeed;
+    }
+
+    private resolveReadyOnce(): void {
+        if (this.readySettled) {
+            return;
+        }
+        this.readySettled = true;
+        this.resolveReady();
+    }
+
+    private rejectReadyOnce(error: StandaloneCharacterReadyError): void {
+        if (this.readySettled) {
+            return;
+        }
+        this.readySettled = true;
+        this.rejectReady(error);
     }
 
     private setDepthIfNeeded(depth: number): void {

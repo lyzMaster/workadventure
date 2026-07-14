@@ -1,4 +1,12 @@
 import { expect, type Page } from "@playwright/test";
+import type {
+    AgentActionResult,
+    AgentCharacterDefinition,
+    AgentCharacterSnapshot,
+    CharacterId,
+    CharacterSayType,
+    Direction,
+} from "@workadventure/game-model";
 
 export type BridgeEntity = {
     id: string;
@@ -11,6 +19,13 @@ export type BridgeEntity = {
     name: string;
     color: string;
     direction: string;
+};
+
+export type BridgePrefab = {
+    prefabId: string;
+    collectionName: string;
+    name: string;
+    hasCollisionGrid: boolean;
 };
 
 type StandaloneTestApi = {
@@ -32,7 +47,25 @@ type StandaloneTestApi = {
         moving: boolean;
     };
     getEntities(): BridgeEntity[];
+    listFurniturePrefabs(): BridgePrefab[];
     movePlayer(target: { x: number; y: number }): Promise<{ x: number; y: number; cancelled: boolean }>;
+    spawnAgent(definition: AgentCharacterDefinition): Promise<AgentActionResult<AgentCharacterSnapshot>>;
+    listAgents(): AgentActionResult<AgentCharacterSnapshot[]>;
+    getAgentState(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
+    moveAgent(input: {
+        characterId: CharacterId;
+        target: { x: number; y: number };
+        options?: { tryFindingNearestAvailable?: boolean; timeoutMs?: number; maxCalculations?: number; speed?: number };
+    }): Promise<AgentActionResult<AgentCharacterSnapshot>>;
+    stopAgent(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
+    faceAgent(input: { characterId: CharacterId; direction: Direction }): AgentActionResult<AgentCharacterSnapshot>;
+    speakAgent(input: {
+        characterId: CharacterId;
+        text: string;
+        type?: CharacterSayType;
+    }): AgentActionResult<AgentCharacterSnapshot>;
+    clearAgentSpeech(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
+    removeAgent(input: { characterId: CharacterId }): AgentActionResult<AgentCharacterSnapshot>;
     openFurnitureEditor(): Promise<void>;
     closeFurnitureEditor(): Promise<void>;
     selectFurniture(input: { collectionName: string; prefabId: string }): Promise<{ prefabId: string }>;
@@ -89,12 +122,20 @@ export async function getEntities(page: Page): Promise<BridgeEntity[]> {
     return bridgeCall(page, "getEntities");
 }
 
+export async function getFurniturePrefabs(page: Page): Promise<BridgePrefab[]> {
+    return bridgeCall(page, "listFurniturePrefabs");
+}
+
 export async function getPlayerState(page: Page) {
     return bridgeCall<{ x: number; y: number; direction: string; moving: boolean }>(page, "getPlayerState");
 }
 
 export async function getSceneState(page: Page) {
     return bridgeCall<StandaloneTestApi["getSceneState"] extends () => infer T ? T : never>(page, "getSceneState");
+}
+
+export async function listAgents(page: Page): Promise<AgentActionResult<AgentCharacterSnapshot[]>> {
+    return bridgeCall(page, "listAgents");
 }
 
 export async function expectSingleCanvas(page: Page): Promise<void> {

@@ -4,9 +4,11 @@ import {
     clearStandaloneIndexedDb,
     expectSingleCanvas,
     getEntities,
+    getFurniturePrefabs,
     getPlayerState,
     getSceneState,
     gotoStandalone,
+    listAgents,
 } from "./helpers/standalone";
 
 test.describe("Standalone regression", () => {
@@ -58,6 +60,80 @@ test.describe("Standalone regression", () => {
         expect(playerAfterCollision.x).toBeGreaterThanOrEqual(0);
         expect(playerAfterCollision.y).toBeGreaterThanOrEqual(0);
 
+        console.log("step: agent spawn");
+        const agentAppearance = {
+            textures: [
+                {
+                    id: "standalone-agent-e2e",
+                    url: "/resources/characters/pipoya/Male%2001-1.png",
+                    layer: 0,
+                },
+            ],
+        };
+        const spawnResult = await bridgeCall(page, "spawnAgent", {
+            characterId: "agent-home",
+            name: "Agent Home",
+            sceneId: "home",
+            appearance: agentAppearance,
+            spawnPosition: { x: 96, y: 96, direction: "down", moving: false },
+        });
+        expect(spawnResult).toMatchObject({ ok: true });
+        await expect(page.locator(".standalone-character-name", { hasText: "Agent Home" })).toBeVisible();
+        await expect
+            .poll(async () => {
+                const agents = await listAgents(page);
+                return agents.ok ? agents.value.length : 0;
+            })
+            .toBe(1);
+        await expect
+            .poll(async () => {
+                const state = await bridgeCall(page, "getAgentState", { characterId: "agent-home" });
+                return state.ok ? state.value.motionState : undefined;
+            })
+            .toBe("idle");
+
+        console.log("step: agent move");
+        const agentBeforeMove = await bridgeCall(page, "getAgentState", { characterId: "agent-home" });
+        expect(agentBeforeMove).toMatchObject({ ok: true });
+        const agentMoveResult = await bridgeCall(page, "moveAgent", {
+            characterId: "agent-home",
+            target: { x: 352, y: 96 },
+        });
+        expect(agentMoveResult).toMatchObject({ ok: true });
+        const agentAfterMove = await bridgeCall(page, "getAgentState", { characterId: "agent-home" });
+        expect(agentAfterMove.value.position.x).not.toBe(agentBeforeMove.value.position.x);
+
+        console.log("step: agent blocked target");
+        const wallMoveResult = await bridgeCall(page, "moveAgent", {
+            characterId: "agent-home",
+            target: { x: 8, y: 8 },
+        });
+        expect(wallMoveResult).toMatchObject({ ok: false, code: "path_not_found" });
+
+        console.log("step: agent speech face stop");
+        const speakResult = await bridgeCall(page, "speakAgent", {
+            characterId: "agent-home",
+            text: "hello",
+            type: "speech",
+        });
+        expect(speakResult).toMatchObject({ ok: true });
+        await expect(page.locator(".standalone-character-speech-bubble", { hasText: "hello" })).toBeVisible();
+        const clearSpeechResult = await bridgeCall(page, "clearAgentSpeech", { characterId: "agent-home" });
+        expect(clearSpeechResult).toMatchObject({ ok: true });
+        await expect(page.locator(".standalone-character-speech-bubble", { hasText: "hello" })).toHaveCount(0);
+        const faceResult = await bridgeCall(page, "faceAgent", { characterId: "agent-home", direction: "left" });
+        expect(faceResult).toMatchObject({ ok: true });
+        expect(faceResult.value.position.direction).toBe("left");
+        const movingAgent = bridgeCall(page, "moveAgent", {
+            characterId: "agent-home",
+            target: { x: 416, y: 320 },
+            options: { speed: 2 },
+        });
+        await page.waitForTimeout(50);
+        const stopResult = await bridgeCall(page, "stopAgent", { characterId: "agent-home" });
+        expect(stopResult).toMatchObject({ ok: true });
+        await expect(movingAgent).resolves.toMatchObject({ ok: false, code: "cancelled" });
+
         console.log("step: open editor");
         await page.getByTestId("open-standalone-map-editor").click();
         await expect(page.getByTestId("standalone-editor-panel")).toBeVisible();
@@ -83,6 +159,24 @@ test.describe("Standalone regression", () => {
         const created = entities.find((entity) => entity.id === placed.entityId);
         expect(created).toBeTruthy();
         expect(created?.prefabId).toBe(firstPrefabId);
+
+        const blockingPrefab = (await getFurniturePrefabs(page)).find((prefab) => prefab.hasCollisionGrid);
+        expect(blockingPrefab).toBeTruthy();
+        await bridgeCall(page, "selectFurniture", {
+            collectionName: blockingPrefab?.collectionName,
+            prefabId: blockingPrefab?.prefabId,
+        });
+        const blockingPlaced = await bridgeCall<{ entityId: string }>(page, "placeFurniture", {
+            x: 320,
+            y: 224,
+        });
+        const blockingEntity = (await getEntities(page)).find((entity) => entity.id === blockingPlaced.entityId);
+        expect(blockingEntity).toBeTruthy();
+        const furnitureBlockedMoveResult = await bridgeCall(page, "moveAgent", {
+            characterId: "agent-home",
+            target: { x: (blockingEntity?.x ?? 0) + 16, y: (blockingEntity?.y ?? 0) + 64 },
+        });
+        expect(furnitureBlockedMoveResult).toMatchObject({ ok: false, code: "path_not_found" });
 
         console.log("step: update furniture");
         await bridgeCall(page, "selectEntity", { entityId: placed.entityId });
@@ -126,6 +220,46 @@ test.describe("Standalone regression", () => {
             .poll(async () => (await getEntities(page)).find((entity) => entity.id === placed.entityId)?.prefabId)
             .toBe(secondPrefabId);
 
+        console.log("step: agent move cancellation and concurrency");
+        const slowFirstMove = bridgeCall(page, "moveAgent", {
+            characterId: "agent-home",
+            target: { x: 96, y: 320 },
+            options: { speed: 1 },
+        });
+        await page.waitForTimeout(50);
+        const secondMove = bridgeCall(page, "moveAgent", {
+            characterId: "agent-home",
+            target: { x: 160, y: 320 },
+        });
+        await expect(slowFirstMove).resolves.toMatchObject({ ok: false, code: "cancelled" });
+        await expect(secondMove).resolves.toMatchObject({ ok: true });
+
+        const spawnSecondAgent = await bridgeCall(page, "spawnAgent", {
+            characterId: "agent-home-2",
+            name: "Agent Home 2",
+            sceneId: "home",
+            appearance: agentAppearance,
+            spawnPosition: { x: 128, y: 96, direction: "down", moving: false },
+        });
+        expect(spawnSecondAgent).toMatchObject({ ok: true });
+        const concurrentFirst = bridgeCall(page, "moveAgent", {
+            characterId: "agent-home",
+            target: { x: 352, y: 320 },
+        });
+        const concurrentSecond = bridgeCall(page, "moveAgent", {
+            characterId: "agent-home-2",
+            target: { x: 384, y: 320 },
+        });
+        await expect(concurrentFirst).resolves.toMatchObject({ ok: true });
+        await expect(concurrentSecond).resolves.toMatchObject({ ok: true });
+
+        const removeSecondAgent = await bridgeCall(page, "removeAgent", { characterId: "agent-home-2" });
+        expect(removeSecondAgent).toMatchObject({ ok: true });
+        expect(await bridgeCall(page, "getAgentState", { characterId: "agent-home-2" })).toMatchObject({
+            ok: false,
+            code: "character_not_found",
+        });
+
         console.log("step: reload restore");
         await bridgeCall(page, "flushPersistence");
         await page.reload();
@@ -138,6 +272,8 @@ test.describe("Standalone regression", () => {
         await page.getByTestId("standalone-switch-office").click();
         await page.waitForFunction(() => typeof window.__standaloneTest !== "undefined");
         await expect(page.getByTestId("standalone-active-scene")).toContainText("Office");
+        const officeAgents = await listAgents(page);
+        expect(officeAgents).toMatchObject({ ok: true, value: [] });
         let officeEntities = await getEntities(page);
         expect(officeEntities.some((entity) => entity.id === placed.entityId)).toBeFalsy();
 
@@ -161,9 +297,23 @@ test.describe("Standalone regression", () => {
         await page.getByTestId("standalone-switch-home").click();
         await page.waitForFunction(() => typeof window.__standaloneTest !== "undefined");
         await expect(page.getByTestId("standalone-active-scene")).toContainText("Home");
+        const restoredHomeAgents = await listAgents(page);
+        expect(restoredHomeAgents).toMatchObject({ ok: true, value: [] });
         entities = await getEntities(page);
         expect(entities.some((entity) => entity.id === placed.entityId)).toBeTruthy();
         expect(entities.some((entity) => entity.id === officePlaced.entityId)).toBeFalsy();
+
+        const playerStillWorksBefore = await getPlayerState(page);
+        const playerStillWorksMove = await bridgeCall<{ x: number; y: number; cancelled: boolean }>(page, "movePlayer", {
+            x: 96,
+            y: 96,
+        });
+        expect(playerStillWorksMove.cancelled).toBeFalsy();
+        const playerStillWorksAfter = await getPlayerState(page);
+        expect(playerStillWorksAfter).not.toMatchObject({
+            x: playerStillWorksBefore.x,
+            y: playerStillWorksBefore.y,
+        });
 
         console.log("step: delete undo redo");
         await bridgeCall(page, "deleteEntity", { entityId: placed.entityId });
