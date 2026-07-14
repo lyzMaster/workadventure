@@ -1,4 +1,10 @@
-import { AreaData, WAMEntityData, type WAMFileFormat } from "@workadventure/map-editor";
+import {
+    AreaData,
+    WAMEntityData,
+    standaloneWamToStorageDto,
+    storageDtoToStandaloneWam,
+    type WAMFileFormat,
+} from "@workadventure/map-editor";
 import { z } from "zod";
 import type { StandaloneSceneDefinition } from "./StandaloneSceneDefinition";
 
@@ -30,14 +36,16 @@ export function createSceneOverlay(
     wam: WAMFileFormat,
     updatedAt = new Date().toISOString(),
 ): SceneOverlay {
+    const { wam: normalizedWam } = storageDtoToStandaloneWam(wam);
+    const storageWam = standaloneWamToStorageDto(normalizedWam);
     return SceneOverlay.parse({
         schemaVersion: 1,
         sceneId: definition.sceneId,
         baseMapId: definition.baseMapId,
         baseMapRevision: definition.baseMapRevision,
         baseEntityIds: [...baseEntityIds],
-        entities: structuredClone(wam.entities),
-        areas: structuredClone(wam.areas),
+        entities: structuredClone(storageWam.entities),
+        areas: structuredClone(storageWam.areas),
         updatedAt,
     });
 }

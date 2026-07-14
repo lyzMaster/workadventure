@@ -18,7 +18,6 @@
     "libs/world-command",
     "libs/map-editor",
     "libs/math-utils",
-    "libs/shared-utils",
     "libs/tailwind"
   ]
 }

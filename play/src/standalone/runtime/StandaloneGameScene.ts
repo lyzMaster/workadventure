@@ -5,9 +5,11 @@ import {
     type EntityPrefab,
     type EntityPrefabType,
     GameMap,
+    normalizeStandaloneWam,
+    standaloneWamToStorageDto,
+    storageDtoToStandaloneWam,
     type WAMFileFormat,
 } from "@workadventure/map-editor";
-import { wamFileMigration } from "@workadventure/map-editor/src/Migrations/WamFileMigration";
 import { Direction, type CharacterMoveResult } from "@workadventure/game-model";
 import { DirtyScene } from "../../front/Phaser/Game/DirtyScene";
 import { SuperLoaderPlugin } from "../../front/Phaser/Services/SuperLoaderPlugin";
@@ -49,32 +51,12 @@ import type { CollisionGridProvider } from "../pathfinding/CollisionGridProvider
 import { FurnitureRuntimeController } from "../furniture/FurnitureRuntimeController";
 import { StandaloneAgentCommandAdapter } from "../commands/StandaloneAgentCommandAdapter";
 import type { WorldSceneRuntime } from "../commands/types";
+import { Deferred } from "../../common/Deferred";
 
 type Position = { x: number; y: number };
 type Tilemap = Phaser.Tilemaps.Tilemap;
 type Tileset = Phaser.Tilemaps.Tileset;
 type PhysicsSprite = Phaser.Physics.Arcade.Sprite;
-
-class Deferred<T> {
-    public readonly promise: Promise<T>;
-    private resolveCallback!: (value: T | PromiseLike<T>) => void;
-    private rejectCallback!: (reason?: unknown) => void;
-
-    public constructor() {
-        this.promise = new Promise<T>((resolve, reject) => {
-            this.resolveCallback = resolve;
-            this.rejectCallback = reject;
-        });
-    }
-
-    public resolve(value: T): void {
-        this.resolveCallback(value);
-    }
-
-    public reject(reason?: unknown): void {
-        this.rejectCallback(reason);
-    }
-}
 
 const MOUSE_WHEEL_ZOOM_RATE = 0.5;
 
@@ -369,7 +351,7 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
         if (!response.ok) {
             throw new Error(`Unable to load standalone WAM ${this.context.wamUrl}: ${response.status}`);
         }
-        const baseWam = wamFileMigration.migrate(await response.json());
+        const baseWam = this.normalizeRuntimeWam(await response.json(), this.context.wamUrl);
         this.baseEntityIds = Object.keys(baseWam.entities);
         this.wamFile = await this.mergeStoredOverlay(baseWam);
         this.mapUrlFile = new URL(this.wamFile.mapUrl, this.context.wamUrl).toString();
@@ -387,11 +369,22 @@ export class StandaloneGameScene extends DirtyScene implements CharacterRuntimeH
             if (!result.ok) {
                 console.error(`[Standalone] overlay_merge_failed: ${result.message}`);
             }
-            return result.wam;
+            return this.normalizeRuntimeWam(result.wam, `overlay:${this.context.sceneId}`);
         } catch (error) {
             console.error("[Standalone] overlay_load_failed: using base WAM", error);
             return baseWam;
         }
+    }
+
+    private normalizeRuntimeWam(input: unknown, source: string): WAMFileFormat {
+        const { wam, diagnostics } =
+            typeof input === "object" && input !== null && "entities" in input && "areas" in input
+                ? storageDtoToStandaloneWam(input as WAMFileFormat)
+                : normalizeStandaloneWam(input);
+        if (diagnostics.length > 0) {
+            console.warn(`[Standalone] stripped_unsupported_wam_features: ${source}`, diagnostics);
+        }
+        return standaloneWamToStorageDto(wam);
     }
 
     private queueTmjLoad(mapUrlFile: string): void {

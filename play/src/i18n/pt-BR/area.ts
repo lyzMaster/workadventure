@@ -1,23 +1,14 @@
-import type { BaseTranslation } from "../i18n-types";
+import type { DeepPartial } from "../DeepPartial";
+import type { Translation } from "../i18n-types";
 
-const area: BaseTranslation = {
-    noAccess: "Desculpe, você não tem acesso a esta área.",
-    blocked: {
-        locked: "Esta área está bloqueada. Você não pode entrar.",
-        maxUsers: "Esta área está cheia. Você não pode entrar.",
-        noAccess: "Desculpe, você não tem acesso a esta área.",
-        unlockWithTrigger: "{trigger} para desbloquear esta área.",
-    },
-    personalArea: {
-        claimDescription: "Esta é uma área pessoal. Você quer torná-la sua?",
-        buttons: {
-            yes: "Sim",
-            no: "Não",
-            confirm: "Confirmar",
-        },
-        personalSpaceWithNames: "Espaço pessoal de {name}",
-        alreadyHavePersonalArea: "Você já possui uma área pessoal. Ela será excluída se você reivindicar esta.",
-    },
+const area: DeepPartial<Translation["area"]> = {
+    "noAccess": "Desculpe, você não tem acesso a esta área.",
+    "blocked": {
+        "locked": "Esta área está bloqueada. Você não pode entrar.",
+        "maxUsers": "Esta área está cheia. Você não pode entrar.",
+        "noAccess": "Desculpe, você não tem acesso a esta área.",
+        "unlockWithTrigger": "{trigger} para desbloquear esta área."
+    }
 };
 
 export default area;

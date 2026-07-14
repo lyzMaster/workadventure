@@ -22,7 +22,7 @@ Type-only imports and import ordering are enforced by ESLint.
 import type { ServerDuplexStream } from "@grpc/grpc-js";
 import type { CharacterTexture } from "@workadventure/game-model";
 
-import { AvailabilityStatus } from "@workadventure/game-model";
+import { directionFromVector } from "@workadventure/game-model";
 
 import { PlayerVariables } from "../Services/PlayersRepository/PlayerVariables";
 ```

@@ -20,7 +20,6 @@ world commands.
 - `libs/world-command/`: command, result, event, and schema definitions
 - `libs/map-editor/`: WAM/TMJ map model helpers and editor DTOs
 - `libs/math-utils/`: geometry helpers
-- `libs/shared-utils/`: small shared utilities still used by standalone code
 - `docs/architecture.md`: current runtime architecture overview
 
 ## Install

@@ -20,6 +20,15 @@ const chair: WAMEntityData = {
     properties: [],
 };
 
+function expectStoredChair(entity: WAMEntityData | undefined): void {
+    expect(entity).toMatchObject({
+        x: chair.x,
+        y: chair.y,
+        prefabRef: chair.prefabRef,
+    });
+    expect(entity?.properties).toBeUndefined();
+}
+
 class MemorySceneStorage implements SceneStorage {
     public overlay: SceneOverlay | null = null;
     public savePromises: Promise<void>[] = [];
@@ -115,7 +124,7 @@ describe("LocalMapEditTransport", () => {
         await command.execute();
 
         await expect(transport.submit(command)).resolves.toMatchObject({ ok: true });
-        expect(storage.overlay?.entities.chair).toEqual(chair);
+        expectStoredChair(storage.overlay?.entities.chair);
     });
 
     it("persists an updated position and prefabRef", async () => {
@@ -157,7 +166,7 @@ describe("LocalMapEditTransport", () => {
         const redo = undo.getUndoCommand();
         await redo.execute();
         await transport.submit(redo);
-        expect(storage.overlay?.entities.chair).toEqual(chair);
+        expectStoredChair(storage.overlay?.entities.chair);
     });
 
     it("reports scene_not_loaded without writing", async () => {
@@ -176,6 +185,6 @@ describe("LocalMapEditTransport", () => {
         await submitPromise;
 
         expect(storage.overlay?.sceneId).toBe("home");
-        expect(storage.overlay?.entities.chair).toEqual(chair);
+        expectStoredChair(storage.overlay?.entities.chair);
     });
 });

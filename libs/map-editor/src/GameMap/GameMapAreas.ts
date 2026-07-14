@@ -1,8 +1,8 @@
 import { MathUtils } from "@workadventure/math-utils";
-import { errorHandler } from "@workadventure/shared-utils/src/ErrorHandler";
 import { deepmergeInto } from "deepmerge-ts";
 import type { AreaData, AreaDataProperty, AtLeast, EntityCoordinates, WAMFileFormat } from "../types";
 import { AreaDataProperties, PersonalAreaPropertyData, RestrictedRightsPropertyData } from "../types";
+import { errorHandler } from "../Utils/ErrorHandler";
 
 export type AreaChangeCallback = (
     areasChangedByAction: Array<AreaData>,
