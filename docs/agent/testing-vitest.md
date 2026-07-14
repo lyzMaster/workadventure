@@ -1,24 +1,21 @@
 # Testing (Vitest)
 
-Vitest test locations vary by package: some are under `tests/`, while others are colocated under `src/`.
+The authoritative unit test suite for this repo is the standalone Vitest config in `play/`.
 
 ## Run a single test once
 
 ```bash
-cd play && npm test -- --run tests/front/Utils/TokenBucket.test.ts
-cd back && npm test -- --run tests/CommunicationManager.test.ts
-cd map-storage && npm test -- --run src/Services/tests/LockByKey.test.ts
-cd libs/map-editor && npm test -- tests/WAMSetting.test.ts
+cd play
+npm test -- --run tests/front/Standalone/WorldCommand/WorldCommandGateway.test.ts
 ```
 
-Test paths are relative to the selected package. `play`, `back`, and `map-storage` invoke `vitest` and may enter watch
-mode in an interactive terminal unless `--run` is passed. Library test scripts generally already use `vitest run`.
+The current standalone config includes `tests/front/Standalone/**/*.test.ts` only.
 
 ## Watch mode
 
 ```bash
 cd play
-npm test -- tests/front/Utils/TokenBucket.test.ts
+npm test tests/front/Standalone/WorldCommand/WorldCommandGateway.test.ts
 ```
 
 ## Conventions
@@ -33,9 +30,7 @@ describe("ClassName", () => {
 
   describe("methodName", () => {
     it("should do X when Y", async () => {
-      const user = createMockUser("1");
-
-      const result = await manager.process(user);
+      const result = await runtime.process(command);
 
       expect(result).toBe(true);
     });

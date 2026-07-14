@@ -1,6 +1,14 @@
 {
   "name": "workadventure",
   "private": true,
+  "scripts": {
+    "dev:standalone": "npm run dev:standalone --workspace=workadventure-play",
+    "typecheck:standalone": "npm run typecheck:standalone --workspace=workadventure-play",
+    "test": "npm test --workspace=workadventure-play --",
+    "build:standalone": "npm run build:standalone --workspace=workadventure-play",
+    "preview:standalone": "npm run preview:standalone --workspace=workadventure-play",
+    "test:e2e:standalone": "npm run test:e2e:standalone --workspace=workadventure-play"
+  },
   "devDependencies": {
     "typescript": "^5.9.3"
   },

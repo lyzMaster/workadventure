@@ -1,17 +1,17 @@
 # Linting & Formatting
 
 ```bash
-npm run typecheck
-npm run lint
-npm run lint-fix
-npm run pretty
-npm run pretty-check
+npm run typecheck:standalone
+npm test -- --run
+npm run build:standalone
 ```
 
 Notes:
-- `npm run svelte-check` is for the `play/` project only.
-- Full-project typecheck and lint can be slow (linting can take ~20 minutes). Consider:
+- These are the authoritative standalone gates for this repo.
+- There is no root Husky flow or legacy multi-service lint pipeline anymore.
+- If you need targeted formatting, run package-local tooling directly, for example:
 
 ```bash
-npx lint-staged
+cd play
+npx prettier --check .
 ```

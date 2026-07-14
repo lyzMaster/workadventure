@@ -1,7 +1,9 @@
-# Chrome DevTools MCP
+# Browser DevTools
 
-If you have access to the ChromeDevTools MCP server, WorkAdventure is available at:
+When the standalone dev server is running, open:
 
 ```
-http://play.workadventure.localhost
+http://localhost:5173/standalone.html
 ```
+
+If Vite falls back to another port, use the printed `standalone.html` URL instead.

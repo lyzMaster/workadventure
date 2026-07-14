@@ -1,5 +1,4 @@
 import path from "node:path";
-import fs from "node:fs";
 import { defineConfig, type Plugin } from "vite";
 import { svelte, vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
@@ -26,7 +25,6 @@ export default defineConfig({
     plugins: [
         disableViteClientWebSocket(),
         removeViteClient(),
-        removeCopiedIframeApi(),
         tailwindcss(),
         svelte({ preprocess: vitePreprocess() }),
         tsconfigPaths(),
@@ -63,18 +61,6 @@ function disableViteClientWebSocket(): Plugin {
                     export class ErrorOverlay {}
                 `);
             });
-        },
-    };
-}
-
-function removeCopiedIframeApi(): Plugin {
-    return {
-        name: "standalone-remove-copied-iframe-api",
-        writeBundle(options) {
-            const outDir = options.dir ?? path.resolve(process.cwd(), "dist/standalone");
-            for (const filename of ["iframe_api.js", "iframe_api.js.map"]) {
-                fs.rmSync(path.resolve(outDir, filename), { force: true });
-            }
         },
     };
 }

@@ -1,6 +1,6 @@
-# AGENTS.md - WorkAdventure Monorepo
+# AGENTS.md - Standalone Pixel World Runtime Repo
 
-WorkAdventure is now maintained in this workspace as a Vite standalone TypeScript application.
+This repository is maintained as a browser-first Vite + TypeScript standalone runtime.
 
 ## Instruction scope
 
@@ -13,9 +13,7 @@ WorkAdventure is now maintained in this workspace as a Vite standalone TypeScrip
 ## Main projects
 
 - `play/AGENTS.md`: Svelte/Phaser standalone frontend.
-- `messages/AGENTS.md`: protobuf sources and generated TypeScript.
 - `libs/AGENTS.md`: shared `@workadventure/*` libraries.
-- `tests/AGENTS.md`: legacy Playwright end-to-end tests.
 
 ## Shared guidance
 
